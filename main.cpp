@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     }
 
     int mainret = app.exec();
-    app.stopMonitor(); // shoult stop BG thread before exiting app
+    app.stopMonitor(); // should stop BG thread before exiting app
 
     return mainret;
 }
