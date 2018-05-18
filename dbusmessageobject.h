@@ -25,6 +25,7 @@ public:
     QString path;
     QString interface;
     QString member;
+    QString errorName; // only used for error mesages
 };
 
 Q_DECLARE_METATYPE(DBusMessageObject)

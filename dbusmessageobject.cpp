@@ -4,13 +4,14 @@
 bool DBusMessageObject::operator==(const DBusMessageObject &o) const
 {
     return (type == o.type)
-        && (serial == o.serial)
-        && (replySerial == o.replySerial)
-        && (sender == o.sender)
-        && (destination == o.destination)
-        && (path == o.path)
-        && (interface == o.interface)
-        && (member == o.member);
+            && (serial == o.serial)
+            && (replySerial == o.replySerial)
+            && (sender == o.sender)
+            && (destination == o.destination)
+            && (path == o.path)
+            && (interface == o.interface)
+            && (member == o.member)
+            && (errorName == o.errorName);
 }
 
 bool DBusMessageObject::operator!=(const DBusMessageObject &o) const
