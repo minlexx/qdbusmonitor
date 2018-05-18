@@ -65,11 +65,40 @@ DBusHandlerResult DBusMonitorThread::monitorFunc(
         Q_EMIT thiz->dbusDisconnected();
     }
 
+    // get base message properties
+    DBusMessageObject messageObj;
+    messageObj.sender = QString::fromUtf8(dbus_message_get_sender(message));
+    messageObj.destination = QString::fromUtf8(dbus_message_get_destination(message));
+    messageObj.type = dbus_message_get_type (message);
+    const QString messageType = dbusMessageTypeToString(messageObj.type);
+
+    switch (messageObj.type) {
+        case DBUS_MESSAGE_TYPE_METHOD_CALL:
+        case DBUS_MESSAGE_TYPE_SIGNAL:
+            messageObj.serial = dbus_message_get_serial(message);
+            messageObj.path = QString::fromUtf8(dbus_message_get_path(message));
+            messageObj.interface = QString::fromUtf8(dbus_message_get_interface(message));
+            messageObj.member = QString::fromUtf8(dbus_message_get_member(message));
+            break;
+
+        case DBUS_MESSAGE_TYPE_METHOD_RETURN:
+            messageObj.serial = dbus_message_get_serial(message);
+            messageObj.replySerial = dbus_message_get_reply_serial(message);
+            break;
+
+        case DBUS_MESSAGE_TYPE_ERROR:
+            messageObj.errorName = QString::fromUtf8(dbus_message_get_error_name(message));
+            messageObj.replySerial = dbus_message_get_reply_serial(message);
+            break;
+    }
+
+    // get message contents
     DBusMessageIter iter;
-    const QString sender = QString::fromUtf8(dbus_message_get_sender(message));
-    const QString destination = QString::fromUtf8(dbus_message_get_destination(message));
-    const int imessageType = dbus_message_get_type (message);
-    const QString messageType = dbusMessageTypeToString(imessageType);
+    dbus_message_iter_init(message, &iter);
+    // TODO: get message contents
+
+    // maybe some eother processing required
+    Q_EMIT thiz->messageReceived(messageObj);
 
     // Monitors must not allow libdbus to reply to messages, so we eat the message. See DBus bug 1719.
     return DBUS_HANDLER_RESULT_HANDLED;
@@ -79,21 +108,21 @@ DBusHandlerResult DBusMonitorThread::monitorFunc(
 bool DBusMonitorThread::becomeMonitor()
 {
     DBusError error = DBUS_ERROR_INIT;
-    DBusMessage *m;
-    DBusMessage *r;
+    DBusMessage *msg = nullptr;
+    DBusMessage *replyMsg = nullptr;
     dbus_uint32_t zero = 0;
     DBusMessageIter appender, array_appender;
 
-    m = dbus_message_new_method_call(DBUS_SERVICE_DBUS,
+    msg = dbus_message_new_method_call(DBUS_SERVICE_DBUS,
                                      DBUS_PATH_DBUS,
                                      DBUS_INTERFACE_MONITORING,
                                      "BecomeMonitor");
 
-    if (m == nullptr) {
+    if (msg == nullptr) {
         tool_oom ("becoming a monitor");
     }
 
-    dbus_message_iter_init_append(m, &appender);
+    dbus_message_iter_init_append(msg, &appender);
 
     if (!dbus_message_iter_open_container(&appender, DBUS_TYPE_ARRAY, "s", &array_appender)) {
         tool_oom ("opening string array");
@@ -104,10 +133,10 @@ bool DBusMonitorThread::becomeMonitor()
         tool_oom ("finishing arguments");
     }
 
-    r = dbus_connection_send_with_reply_and_block(m_dconn, m, -1, &error);
+    replyMsg = dbus_connection_send_with_reply_and_block(m_dconn, msg, -1, &error);
 
-    if (r != nullptr) {
-        dbus_message_unref(r);
+    if (replyMsg != nullptr) {
+        dbus_message_unref(replyMsg);
     } else if (dbus_error_has_name(&error, DBUS_ERROR_UNKNOWN_INTERFACE)) {
         qCWarning(logMon) << "qdbusmonitor: unable to enable new-style monitoring, "
                              "your dbus-daemon is too old. Falling back to eavesdropping.";
@@ -119,9 +148,9 @@ bool DBusMonitorThread::becomeMonitor()
         dbus_error_free(&error);
     }
 
-    dbus_message_unref (m);
+    dbus_message_unref (msg);
 
-    return (r != nullptr);
+    return (replyMsg != nullptr);
 }
 
 bool DBusMonitorThread::startOnSessionBus()

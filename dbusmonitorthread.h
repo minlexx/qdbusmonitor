@@ -6,6 +6,8 @@
 
 #include <dbus/dbus.h>
 
+#include "dbusmessageobject.h"
+
 
 class DBusMonitorThread: public QThread
 {
@@ -30,6 +32,7 @@ protected:
 
 Q_SIGNALS:
     void dbusDisconnected();
+    void messageReceived(DBusMessageObject messageObj);
 
 private:
     DBusConnection *m_dconn = nullptr;
