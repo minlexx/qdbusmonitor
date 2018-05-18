@@ -24,6 +24,7 @@ add_executable(${PROJECT_NAME}
     "main.cpp"
     "dbusmonitorthread.cpp"
     "dbusmessagesmodel.cpp"
+    "dbusmessageobject.cpp"
     "qml.qrc"
 )
 
