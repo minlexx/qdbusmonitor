@@ -8,7 +8,13 @@ Q_LOGGING_CATEGORY(logMon, "monitor.thread")
 
 #ifdef __cplusplus
 #undef DBUS_ERROR_INIT
+// fix "Zero as null pointer constant" (change NULL to nullptr)
 #define DBUS_ERROR_INIT { nullptr, nullptr, TRUE, 0, 0, 0, 0, nullptr }
+#endif
+
+#ifndef DBUS_INTERFACE_MONITORING
+// Old libdbus version?
+#define DBUS_INTERFACE_MONITORING     "org.freedesktop.DBus.Monitoring"
 #endif
 
 
