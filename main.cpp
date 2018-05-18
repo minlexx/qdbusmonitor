@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QLoggingCategory>
 
+#include "dbusmessageobject.h"
 #include "dbusmonitorthread.h"
 
 
@@ -39,6 +40,8 @@ public:
             // Q_EMIT this->aboutToQuit(); // cannot emit private signals
             this->quit();
         });
+
+        qRegisterMetaType<DBusMessageObject>();
 
         return true;
     }
