@@ -8,12 +8,43 @@ Window {
     height: 480
     title: qsTr("Hello World")
 
-    Button {
-        anchors.centerIn: parent
-        text: qsTr("Quit")
-        onClicked: {
-            console.log("Hey, need to quit!");
-            Qt.quit();
+    Flow {
+        anchors {
+            left: parent.left
+            top: parent.top
+            right: parent.right
+            margins: 10
+        }
+
+        spacing: 10
+
+        Button {
+            text: qsTr("Start on session bus")
+            onClicked: {
+                app.startOnSessionBus();
+            }
+        }
+
+        Button {
+            text: qsTr("Start on system bus")
+            onClicked: {
+                app.startOnSystemBus();
+            }
+        }
+
+        Button {
+            text: qsTr("Stop monitor")
+            onClicked: {
+                app.stopMonitor();
+            }
+        }
+
+        Button {
+            text: qsTr("Quit")
+            onClicked: {
+                console.log("Quit from QML!");
+                Qt.quit();
+            }
         }
     }
 }
