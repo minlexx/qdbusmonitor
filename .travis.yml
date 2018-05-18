@@ -1,0 +1,29 @@
+os: linux
+sudo: required
+language: cpp
+cache: ccache
+compiler:
+  - gcc
+  - clang
+
+git:
+  depth: 1
+
+before_install:
+  - sudo apt-add-repository -y ppa:beineri/opt-qt595-trusty
+  - sudo apt-get -qq update
+  - sudo apt-get -qq install libdbus-1-dev
+  - sudo apt-get -qq install qt59base qt59tools qt59declarative qt59quickcontrols2
+
+before_script:
+  - export QTDIR="/opt/qt59"
+  - export PATH="$QTDIR/bin:$PATH"
+  - qt59-env.sh
+  - mkdir ../build; cd ../build
+  - cmake ../qdbusmonitor
+
+script:
+  - cmake --build . -- -j3
+
+notifications:
+  email: false
