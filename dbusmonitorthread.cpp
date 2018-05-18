@@ -32,17 +32,31 @@ DBusMonitorThread::DBusMonitorThread(QObject *parent)
 }
 
 
+static QString dbusMessageTypeToString(int message_type)
+{
+    switch (message_type)
+    {
+    case DBUS_MESSAGE_TYPE_METHOD_CALL:
+        return QStringLiteral("method call");
+    case DBUS_MESSAGE_TYPE_METHOD_RETURN:
+        return QStringLiteral("method return");
+    case DBUS_MESSAGE_TYPE_ERROR:
+        return QStringLiteral("error");
+    case DBUS_MESSAGE_TYPE_SIGNAL:
+        return QStringLiteral("signal");
+    default:
+        return QStringLiteral("(unknown message type)");
+    }
+}
+
+
 DBusHandlerResult DBusMonitorThread::monitorFunc(
         DBusConnection     *connection,
         DBusMessage        *message,
         void               *user_data)
 {
     Q_UNUSED(connection)
-
     DBusMonitorThread *thiz = static_cast<DBusMonitorThread *>(user_data);
-
-    // TODO: print_message (message, FALSE, sec, usec);
-
     qCDebug(logMon) << "DBus message received by filter!";
 
     if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL, "Disconnected")) {
@@ -50,6 +64,12 @@ DBusHandlerResult DBusMonitorThread::monitorFunc(
         // QCoreApplication::quit();
         Q_EMIT thiz->dbusDisconnected();
     }
+
+    DBusMessageIter iter;
+    const QString sender = QString::fromUtf8(dbus_message_get_sender(message));
+    const QString destination = QString::fromUtf8(dbus_message_get_destination(message));
+    const int imessageType = dbus_message_get_type (message);
+    const QString messageType = dbusMessageTypeToString(imessageType);
 
     // Monitors must not allow libdbus to reply to messages, so we eat the message. See DBus bug 1719.
     return DBUS_HANDLER_RESULT_HANDLED;

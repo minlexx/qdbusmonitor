@@ -23,6 +23,7 @@ find_package(LibDBus REQUIRED)
 add_executable(${PROJECT_NAME}
     "main.cpp"
     "dbusmonitorthread.cpp"
+    "dbusmessagesmodel.cpp"
     "qml.qrc"
 )
 
