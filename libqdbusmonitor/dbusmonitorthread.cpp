@@ -47,10 +47,6 @@ QString dbusMessageTypeToString(int message_type)
 class DBusMonitorThreadPrivate {
 public:
     explicit DBusMonitorThreadPrivate(DBusMonitorThread *parent) : owner(parent) { }
-    DBusConnection *m_dconn = nullptr;
-    DBusMonitorThread *owner = nullptr;
-    bool m_monitor_active = false;
-
     bool becomeMonitor();
     bool startBus(DBusBusType type = DBUS_BUS_SESSION);
     void closeDbusConn();
@@ -61,6 +57,11 @@ public:
             void           *user_data);
 
     void run();
+
+public:
+    DBusConnection *m_dconn = nullptr;
+    DBusMonitorThread *owner = nullptr;
+    bool m_monitor_active = false;
 };
 
 
