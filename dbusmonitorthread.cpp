@@ -57,7 +57,7 @@ DBusHandlerResult DBusMonitorThread::monitorFunc(
 {
     Q_UNUSED(connection)
     DBusMonitorThread *thiz = static_cast<DBusMonitorThread *>(user_data);
-    qCDebug(logMon) << "DBus message received by filter!";
+    // qCDebug(logMon) << "DBus message received by filter!";
 
     if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL, "Disconnected")) {
         // exit(0);
