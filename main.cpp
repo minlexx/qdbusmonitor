@@ -5,6 +5,7 @@
 #include <QLoggingCategory>
 
 #include "dbusmessageobject.h"
+#include "dbusmessagesmodel.h"
 #include "dbusmonitorthread.h"
 
 
@@ -43,6 +44,9 @@ public:
 
         qRegisterMetaType<DBusMessageObject>();
 
+        QObject::connect(&m_thread, &DBusMonitorThread::messageReceived,
+                         this, &MonitorApp::onMessageReceived);
+
         return true;
     }
 
@@ -65,6 +69,10 @@ public Q_SLOTS:
         }
     }
 
+    void onMessageReceived(const DBusMessageObject &dmsg) {
+        m_messages.addMessage(dmsg);
+    }
+
 Q_SIGNALS:
     void shouldExitChanged();
 
@@ -72,6 +80,7 @@ private:
     QQmlApplicationEngine  m_engine;
     DBusMonitorThread      m_thread;
     bool                   m_should_exit = false;
+    DBusMessagesModel      m_messages;
 };
 
 
