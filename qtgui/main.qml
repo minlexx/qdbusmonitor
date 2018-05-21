@@ -75,7 +75,10 @@ Window {
                         id: txtType
                         text: "(" + model.typeString + ") "
                     }
-                    Text { text: model.sender }
+                    //Text { text: model.sender }
+                    Text {
+                        text: model.senderExe !== "" ? model.senderExe : model.sender
+                    }
                     Text {
                         text: "  =>  "
                         visible: !delegate.isSignal
