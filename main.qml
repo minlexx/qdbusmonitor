@@ -9,6 +9,7 @@ Window {
     title: qsTr("Hello World")
 
     Flow {
+        id: flow1
         anchors {
             left: parent.left
             top: parent.top
@@ -44,6 +45,32 @@ Window {
             onClicked: {
                 console.log("Quit from QML!");
                 Qt.quit();
+            }
+        }
+    }
+
+    ListView {
+        id: messagesView
+        anchors {
+            top: flow1.bottom
+            left: parent.left
+            right: parent.right
+            bottom: parent.bottom
+        }
+        model: app.messagesModel
+        delegate: ItemDelegate {
+            implicitHeight: col1.height
+            Column {
+                id: col1
+                Row {
+                    height: txtSender.height
+                    Text {
+                        id: txtSender
+                        text: model.sender
+                    }
+                    Text { text: "  =>  " }
+                    Text { text: model.destination }
+                }
             }
         }
     }
