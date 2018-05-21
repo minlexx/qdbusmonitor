@@ -27,6 +27,9 @@ public:
     QString interface;
     QString member;
     QString errorName; // only used for error mesages
+    //
+    uint senderPid = 0;
+    QString senderExe;
 };
 
 Q_DECLARE_METATYPE(DBusMessageObject)

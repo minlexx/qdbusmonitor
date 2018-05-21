@@ -12,7 +12,9 @@ bool DBusMessageObject::operator==(const DBusMessageObject &o) const
             && (path == o.path)
             && (interface == o.interface)
             && (member == o.member)
-            && (errorName == o.errorName);
+            && (errorName == o.errorName)
+            && (senderPid == o.senderPid)
+            && (senderExe == o.senderExe);
 }
 
 bool DBusMessageObject::operator!=(const DBusMessageObject &o) const
