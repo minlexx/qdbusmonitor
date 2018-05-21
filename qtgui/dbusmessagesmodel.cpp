@@ -18,6 +18,8 @@ QHash<int, QByteArray> DBusMessagesModel::roleNames() const
         {Path,         QByteArrayLiteral("path")},
         {Interface,    QByteArrayLiteral("interface")},
         {Member,       QByteArrayLiteral("member")},
+        {SenderPid,    QByteArrayLiteral("senderPid")},
+        {SenderExe,    QByteArrayLiteral("senderExe")},
     };
     return r;
 }
@@ -54,6 +56,8 @@ QVariant DBusMessagesModel::data(const QModelIndex &index, int role) const
     case Role::Path:          ret = dmsg.path;         break;
     case Role::Interface:     ret = dmsg.interface;    break;
     case Role::Member:        ret = dmsg.member;       break;
+    case Role::SenderPid:     ret = dmsg.senderPid;    break;
+    case Role::SenderExe:     ret = dmsg.senderExe;    break;
     }
     return ret;
 }

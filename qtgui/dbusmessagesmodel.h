@@ -24,7 +24,10 @@ public:
         Destination,
         Path,
         Interface,
-        Member
+        Member,
+        //
+        SenderPid,
+        SenderExe,
     };
 
 public:
