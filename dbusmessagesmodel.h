@@ -4,6 +4,10 @@
 #include <QAbstractListModel>
 #include <QHash>
 #include <QByteArray>
+#include <QVector>
+#include <QMutex>
+
+#include "dbusmessageobject.h"
 
 
 class DBusMessagesModel : public QAbstractListModel
@@ -12,7 +16,7 @@ class DBusMessagesModel : public QAbstractListModel
 
 public:
     enum Roles {
-        Serial,
+        Serial = Qt::UserRole + 1,
         ReplySerial,
         Type,
         Sender,
@@ -31,6 +35,8 @@ public:
 
 private:
     QHash<int, QByteArray> m_roles;
+    QVector<DBusMessageObject> m_data;
+    mutable QMutex m_mutex;
 };
 
 #endif // DBUSMESSAGESMODEL_H
