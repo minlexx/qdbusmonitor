@@ -62,18 +62,31 @@ Window {
         }
         model: app.messagesModel
         delegate: ItemDelegate {
+            id: delegate
             implicitHeight: col1.height
+            property bool isSignal: model.typeString === "signal"
+            property bool isError:  model.typeString === "error"
             Column {
                 id: col1
                 Row {
                     height: txtType.height
+                    spacing: 5
                     Text {
                         id: txtType
                         text: "(" + model.typeString + ") "
                     }
                     Text { text: model.sender }
-                    Text { text: "  =>  " }
-                    Text { text: model.destination }
+                    Text {
+                        text: "  =>  "
+                        visible: !delegate.isSignal
+                    }
+                    Text {
+                        text: model.destination
+                        visible: !delegate.isSignal
+                    }
+                    Text { text: model.path }
+                    Text { text: model.interface }
+                    Text { text: model.member }
                 }
             }
         }
