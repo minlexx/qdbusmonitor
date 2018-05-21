@@ -1,4 +1,5 @@
 #include <dbus/dbus.h>
+#include <QHash>
 #include <QDebug>
 #include <QLoggingCategory>
 
@@ -48,8 +49,11 @@ class DBusMonitorThreadPrivate {
 public:
     explicit DBusMonitorThreadPrivate(DBusMonitorThread *parent) : owner(parent) { }
     bool becomeMonitor();
+    void addNameOwner(const QString &busName, const QString &nameOwner);
     bool startBus(DBusBusType type = DBUS_BUS_SESSION);
     void closeDbusConn();
+
+    QString resolveDBusAddressToName(const QString &addr);
 
     static DBusHandlerResult monitorFunc(
             DBusConnection *connection,
@@ -62,6 +66,8 @@ public:
     DBusConnection *m_dconn = nullptr;
     DBusMonitorThread *owner = nullptr;
     bool m_monitor_active = false;
+    QString m_myName;
+    QHash<QString, QString> m_nameOwners;
 };
 
 
@@ -114,6 +120,19 @@ bool DBusMonitorThreadPrivate::becomeMonitor()
 }
 
 
+void DBusMonitorThreadPrivate::addNameOwner(const QString &busName, const QString &nameOwner)
+{
+    if (m_nameOwners.contains(nameOwner)) {
+        QString existingName = m_nameOwners[nameOwner];
+        existingName.append(QLatin1Char(','));
+        existingName.append(busName);
+        m_nameOwners[nameOwner] = existingName;
+    } else {
+        m_nameOwners[nameOwner] = busName;
+    }
+}
+
+
 bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
 {
     if (m_dconn) {
@@ -129,6 +148,87 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
         qCWarning(logMon) << "Failed to open dbus connction" << derror.message;
         dbus_error_free(&derror);
         return false;
+    }
+
+    m_myName = QString::fromUtf8(dbus_bus_get_unique_name(m_dconn));
+    qCDebug(logMon) << "Connected to D_Bus as: " << m_myName;
+
+    qCDebug(logMon).nospace() << "Compiled with libdbus version: " << DBUS_MAJOR_VERSION
+                              << "." << DBUS_MINOR_VERSION
+                              << "." << DBUS_MICRO_VERSION;
+
+    int vmajor = 0, vminor = 0, vmicro = 0;
+    dbus_get_version(&vmajor, &vminor, &vmicro);
+    qCDebug(logMon).nospace() << "Linked libdbus version: " << vmajor
+                              << "." << vminor << "." << vmicro;
+
+    // get all known bus names
+    DBusMessage *dmsg = dbus_message_new_method_call(
+                DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListNames");
+    if (!dmsg) {
+        tool_oom("create new message");
+    }
+
+    dbus_error_init(&derror);
+    DBusMessage *dreply = dbus_connection_send_with_reply_and_block(m_dconn, dmsg, 15000, &derror);
+    if (!dreply) {
+        qCWarning(logMon) << "Failed to query bus names:" << derror.message;
+        dbus_error_free(&derror);
+        closeDbusConn();
+        return false;
+    }
+
+    QStringList knownNames;
+    DBusMessageIter diter;
+    dbus_message_iter_init(dreply, &diter);
+    do {
+        int mtype = dbus_message_iter_get_arg_type(&diter);
+        if (mtype == DBUS_TYPE_INVALID) {
+            break;
+        }
+        if (mtype == DBUS_TYPE_ARRAY) {
+            DBusMessageIter subiter;
+            dbus_message_iter_recurse(&diter, &subiter);
+            do {
+                mtype = dbus_message_iter_get_arg_type(&subiter);
+                if (mtype == DBUS_TYPE_INVALID) {
+                    break;
+                }
+                DBusBasicValue value;
+                dbus_message_iter_get_basic(&subiter, &value);
+                const QString nextName = QString::fromUtf8(value.str);
+                if (!nextName.startsWith(QLatin1Char(':'))) {
+                    knownNames.append(nextName);
+                }
+            } while(dbus_message_iter_next(&subiter));
+        }
+    } while(dbus_message_iter_next(&diter));
+    dbus_message_unref(dreply);
+    dbus_message_unref(dmsg);
+
+    // for each known name request its owner
+    for (const QString &busName: knownNames) {
+        dmsg = dbus_message_new_method_call(
+                    DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetNameOwner");
+        if (!dmsg) {
+            tool_oom("create new message");
+        }
+        std::string stds = busName.toStdString();
+        const char *str_ptr = stds.c_str();
+        dbus_message_append_args(dmsg, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID);
+        dbus_error_init(&derror);
+        dreply = dbus_connection_send_with_reply_and_block(m_dconn, dmsg, 15000, &derror);
+        if (dreply) {
+            dbus_error_init(&derror);
+            if (!dbus_message_get_args(dreply, &derror, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID)) {
+                qCWarning(logMon) << "Failed to read name owner reply args:" << derror.message;
+                dbus_error_free(&derror);
+            }
+            const QString nameOwner = QString::fromUtf8(str_ptr);
+            addNameOwner(busName, nameOwner);
+        }
+        dbus_message_unref(dreply);
+        dbus_message_unref(dmsg);
     }
 
     // Receive o.fd.Peer messages as normal messages, rather than having
@@ -168,6 +268,15 @@ void DBusMonitorThreadPrivate::closeDbusConn()
         m_dconn = nullptr;
     }
     m_monitor_active = false;
+}
+
+
+QString DBusMonitorThreadPrivate::resolveDBusAddressToName(const QString &addr)
+{
+    if (m_nameOwners.contains(addr)) {
+        return m_nameOwners[addr];
+    }
+    return addr;
 }
 
 
@@ -218,8 +327,20 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     dbus_message_iter_init(message, &iter);
     // TODO: get message contents
 
-    // maybe some eother processing required
-    Q_EMIT owner->messageReceived(messageObj);
+    bool thisIsMyMessage = false;
+    if ((messageObj.sender == owner->d_ptr->m_myName)
+            || (messageObj.destination == owner->d_ptr->m_myName)) {
+        thisIsMyMessage = true;
+    }
+
+    messageObj.sender = owner->d_ptr->resolveDBusAddressToName(messageObj.sender);
+    messageObj.destination = owner->d_ptr->resolveDBusAddressToName(messageObj.destination);
+
+    // maybe some other processing required
+    if (!thisIsMyMessage) {
+        // do not show messages from/to monitor itself
+        Q_EMIT owner->messageReceived(messageObj);
+    }
 
     // Monitors must not allow libdbus to reply to messages, so we eat the message. See DBus bug 1719.
     return DBUS_HANDLER_RESULT_HANDLED;
