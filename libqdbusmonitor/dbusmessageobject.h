@@ -20,6 +20,7 @@ public:
     int     type = 0;
     uint    serial = 0;
     uint    replySerial = 0;
+    QString typeString;
     QString sender;
     QString destination;
     QString path;

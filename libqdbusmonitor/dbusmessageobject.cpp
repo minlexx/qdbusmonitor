@@ -6,6 +6,7 @@ bool DBusMessageObject::operator==(const DBusMessageObject &o) const
     return (type == o.type)
             && (serial == o.serial)
             && (replySerial == o.replySerial)
+            && (typeString == o.typeString)
             && (sender == o.sender)
             && (destination == o.destination)
             && (path == o.path)

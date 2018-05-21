@@ -1,14 +1,14 @@
 if(NOT WIN32)
     # Use pkg-config to get the directories and then use these values
     # in the FIND_PATH() and FIND_LIBRARY() calls
-    find_package(PkgConfig)
+    find_package(PkgConfig REQUIRED)
     pkg_check_modules(PKG_LibDBus QUIET dbus-1)
 
     set(LibDBus_DEFINITIONS ${PKG_LibDBus_CFLAGS_OTHER})
     set(LibDBus_VERSION ${PKG_LibDBus_VERSION})
 
-    message(STATUS "PKG_LibDBus_INCLUDE_DIRS" ${PKG_LibDBus_INCLUDE_DIRS})
-    message(STATUS "PKG_LibDBus_LIBRARY_DIRS" ${PKG_LibDBus_LIBRARY_DIRS})
+    #message(STATUS "PKG_LibDBus_INCLUDE_DIRS" ${PKG_LibDBus_INCLUDE_DIRS})
+    #message(STATUS "PKG_LibDBus_LIBRARY_DIRS" ${PKG_LibDBus_LIBRARY_DIRS})
 
     find_path(LibDBus_INCLUDE_DIR
         NAMES
@@ -55,6 +55,7 @@ if(NOT WIN32)
     endif()
 
     mark_as_advanced(LibDBus_LIBRARY LibDBus_INCLUDE_DIR)
+    mark_as_advanced(LibDBus_LIBRARY LibDBus_INCLUDE_DIR2)
 
     # compatibility variables
     set(LibDBus_LIBRARIES ${LibDBus_LIBRARY})

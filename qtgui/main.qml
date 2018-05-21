@@ -21,6 +21,7 @@ Window {
 
         Button {
             text: qsTr("Start on session bus")
+            enabled: !monitor.isRunning
             onClicked: {
                 app.startOnSessionBus();
             }
@@ -28,6 +29,7 @@ Window {
 
         Button {
             text: qsTr("Start on system bus")
+            enabled: !monitor.isRunning
             onClicked: {
                 app.startOnSystemBus();
             }
@@ -35,6 +37,7 @@ Window {
 
         Button {
             text: qsTr("Stop monitor")
+            enabled: monitor.isRunning
             onClicked: {
                 app.stopMonitor();
             }

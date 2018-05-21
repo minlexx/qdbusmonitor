@@ -8,10 +8,11 @@ DBusMessagesModel::DBusMessagesModel(QObject *parent)
 
 QHash<int, QByteArray> DBusMessagesModel::roleNames() const
 {
-    const QHash<int, QByteArray> r = {
+    static const QHash<int, QByteArray> r = {
         {Serial,       QByteArrayLiteral("serial")},
         {ReplySerial,  QByteArrayLiteral("replySerial")},
         {Type,         QByteArrayLiteral("type")},
+        {TypeString,   QByteArrayLiteral("typeString")},
         {Sender,       QByteArrayLiteral("sender")},
         {Destination,  QByteArrayLiteral("destination")},
         {Path,         QByteArrayLiteral("path")},
@@ -44,14 +45,15 @@ QVariant DBusMessagesModel::data(const QModelIndex &index, int role) const
 
     const DBusMessageObject &dmsg = m_data.at(row);
     switch (role) {
-    case Roles::Serial: ret = dmsg.serial; break;
-    case Roles::ReplySerial: ret = dmsg.replySerial; break;
-    case Roles::Type: ret = dmsg.type; break;
-    case Roles::Sender: ret = dmsg.sender; break;
-    case Roles::Destination: ret = dmsg.destination; break;
-    case Roles::Path: ret = dmsg.path; break;
-    case Roles::Interface: ret = dmsg.interface; break;
-    case Roles::Member: ret = dmsg.member; break;
+    case Role::Serial:        ret = dmsg.serial;       break;
+    case Role::ReplySerial:   ret = dmsg.replySerial;  break;
+    case Role::Type:          ret = dmsg.type;         break;
+    case Role::TypeString:    ret = dmsg.typeString;   break;
+    case Role::Sender:        ret = dmsg.sender;       break;
+    case Role::Destination:   ret = dmsg.destination;  break;
+    case Role::Path:          ret = dmsg.path;         break;
+    case Role::Interface:     ret = dmsg.interface;    break;
+    case Role::Member:        ret = dmsg.member;       break;
     }
     return ret;
 }

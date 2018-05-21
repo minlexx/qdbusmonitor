@@ -1,6 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QVariant>
 #include <QDebug>
 #include <QLoggingCategory>
 
@@ -24,9 +25,14 @@ public:
         //
     }
 
+    ~MonitorApp() override {
+        //
+    }
+
     bool init() {
         // context properties first
         m_engine.rootContext()->setContextProperty(QLatin1String("app"), this);
+        m_engine.rootContext()->setContextProperty(QLatin1String("monitor"), &m_thread);
         // load main QML
         m_engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
         if (m_engine.rootObjects().isEmpty()) {
@@ -54,7 +60,9 @@ public Q_SLOTS:
     QQmlApplicationEngine *engine() { return &m_engine; }
     bool shouldExit() const { return m_should_exit; }
     QObject *messagesModelObj() { return static_cast<QObject *>(&m_messages); }
+
     void startOnSessionBus() { m_thread.startOnSessionBus(); }
+
     void startOnSystemBus() { m_thread.startOnSystemBus(); }
 
     void stopMonitor() {

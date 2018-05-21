@@ -15,10 +15,11 @@ class DBusMessagesModel : public QAbstractListModel
     Q_OBJECT
 
 public:
-    enum Roles {
+    enum Role {
         Serial = Qt::UserRole + 1,
         ReplySerial,
         Type,
+        TypeString,
         Sender,
         Destination,
         Path,

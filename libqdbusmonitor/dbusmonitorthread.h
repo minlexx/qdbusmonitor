@@ -4,38 +4,38 @@
 #include <QObject>
 #include <QThread>
 
-#include <dbus/dbus.h>
-
 #include "dbusmessageobject.h"
 
+
+class DBusMonitorThreadPrivate;
 
 class DBusMonitorThread: public QThread
 {
     Q_OBJECT
+    Q_PROPERTY(bool isMonitorActive READ isMonitorActive NOTIFY isMonitorActiveChanged)
 
 public:
     explicit DBusMonitorThread(QObject *parent = nullptr);
 
     bool startOnSessionBus();
     bool startOnSystemBus();
+    bool isMonitorActive() const;
 
 protected:
     void run() override;
-    bool becomeMonitor();
-    bool startBus(DBusBusType type = DBUS_BUS_SESSION);
-    void closeDbusConn();
-
-    static DBusHandlerResult monitorFunc(
-            DBusConnection *connection,
-            DBusMessage    *message,
-            void           *user_data);
 
 Q_SIGNALS:
+    void isMonitorActiveChanged();
     void dbusDisconnected();
     void messageReceived(DBusMessageObject messageObj);
 
 private:
-    DBusConnection *m_dconn = nullptr;
+    DBusMonitorThreadPrivate *d_ptr = nullptr;
+    Q_DECLARE_PRIVATE(DBusMonitorThread)
 };
+
+
+QString dbusMessageTypeToString(int message_type);
+
 
 #endif // DBUSMONITORTHREAD_H
