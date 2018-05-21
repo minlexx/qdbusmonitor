@@ -21,7 +21,7 @@ Window {
 
         Button {
             text: qsTr("Start on session bus")
-            enabled: !monitor.isRunning
+            enabled: !monitor.isMonitorActive
             onClicked: {
                 app.startOnSessionBus();
             }
@@ -29,7 +29,7 @@ Window {
 
         Button {
             text: qsTr("Start on system bus")
-            enabled: !monitor.isRunning
+            enabled: !monitor.isMonitorActive
             onClicked: {
                 app.startOnSystemBus();
             }
@@ -37,7 +37,7 @@ Window {
 
         Button {
             text: qsTr("Stop monitor")
-            enabled: monitor.isRunning
+            enabled: monitor.isMonitorActive
             onClicked: {
                 app.stopMonitor();
             }
@@ -66,11 +66,12 @@ Window {
             Column {
                 id: col1
                 Row {
-                    height: txtSender.height
+                    height: txtType.height
                     Text {
-                        id: txtSender
-                        text: model.sender
+                        id: txtType
+                        text: "(" + model.typeString + ") "
                     }
+                    Text { text: model.sender }
                     Text { text: "  =>  " }
                     Text { text: model.destination }
                 }
