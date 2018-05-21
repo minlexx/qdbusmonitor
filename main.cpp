@@ -16,6 +16,7 @@ class MonitorApp: public QGuiApplication
 {
     Q_OBJECT
     Q_PROPERTY(bool shouldExit READ shouldExit NOTIFY shouldExitChanged)
+    Q_PROPERTY(QObject* messagesModel READ messagesModelObj NOTIFY messagesModelChanged)
 
 public:
     MonitorApp(int &argc, char **argv)
@@ -24,15 +25,14 @@ public:
     }
 
     bool init() {
+        // context properties first
+        m_engine.rootContext()->setContextProperty(QLatin1String("app"), this);
+        // load main QML
         m_engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
         if (m_engine.rootObjects().isEmpty()) {
             qCWarning(logApp) << "Failed to init QML engine! Some error in QML files.";
             return false;
         }
-
-        m_engine.rootContext()->setContextProperty(QLatin1String("app"), this);
-
-        //setQuitOnLastWindowClosed(true);
 
         QObject::connect(&m_engine, &QQmlEngine::quit, [this] () {
             qCDebug(logApp) << "should_exit!";
@@ -53,14 +53,9 @@ public:
 public Q_SLOTS:
     QQmlApplicationEngine *engine() { return &m_engine; }
     bool shouldExit() const { return m_should_exit; }
-
-    void startOnSessionBus() {
-        m_thread.startOnSessionBus();
-    }
-
-    void startOnSystemBus() {
-        m_thread.startOnSystemBus();
-    }
+    QObject *messagesModelObj() { return static_cast<QObject *>(&m_messages); }
+    void startOnSessionBus() { m_thread.startOnSessionBus(); }
+    void startOnSystemBus() { m_thread.startOnSystemBus(); }
 
     void stopMonitor() {
         if (m_thread.isRunning()) {
@@ -75,11 +70,12 @@ public Q_SLOTS:
 
 Q_SIGNALS:
     void shouldExitChanged();
+    void messagesModelChanged();
 
 private:
+    bool                   m_should_exit = false;
     QQmlApplicationEngine  m_engine;
     DBusMonitorThread      m_thread;
-    bool                   m_should_exit = false;
     DBusMessagesModel      m_messages;
 };
 
