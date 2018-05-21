@@ -3,6 +3,10 @@
 #include <QDebug>
 #include <QLoggingCategory>
 
+#ifdef Q_OS_LINUX
+#include <unistd.h>
+#endif
+
 #include "dbusmonitorthread.h"
 
 Q_LOGGING_CATEGORY(logMon, "monitor.thread")
@@ -45,15 +49,29 @@ QString dbusMessageTypeToString(int message_type)
 }
 
 
+#ifdef Q_OS_LINUX
+static QString pid2filename(uint pid)
+{
+    char path[512] = {0};
+    char outbuf[512] = {0};
+    snprintf(path, sizeof(path) - 1, "/proc/%u/exe", pid);
+    readlink(path, outbuf, sizeof(outbuf) - 1);
+    return QString::fromUtf8(outbuf);
+}
+#endif
+
+
 class DBusMonitorThreadPrivate {
 public:
     explicit DBusMonitorThreadPrivate(DBusMonitorThread *parent) : owner(parent) { }
     bool becomeMonitor();
-    void addNameOwner(const QString &busName, const QString &nameOwner);
     bool startBus(DBusBusType type = DBUS_BUS_SESSION);
     void closeDbusConn();
 
+    void addNameOwner(const QString &busName, const QString &nameOwner);
+    void addNamePid(const QString &busName, uint pid);
     QString resolveDBusAddressToName(const QString &addr);
+    uint resolvePid(const QString &addr);
 
     static DBusHandlerResult monitorFunc(
             DBusConnection *connection,
@@ -68,6 +86,7 @@ public:
     bool m_monitor_active = false;
     QString m_myName;
     QHash<QString, QString> m_nameOwners;
+    QHash<QString, uint> m_addrPids;
 };
 
 
@@ -117,19 +136,6 @@ bool DBusMonitorThreadPrivate::becomeMonitor()
     dbus_message_unref (msg);
 
     return (replyMsg != nullptr);
-}
-
-
-void DBusMonitorThreadPrivate::addNameOwner(const QString &busName, const QString &nameOwner)
-{
-    if (m_nameOwners.contains(nameOwner)) {
-        QString existingName = m_nameOwners[nameOwner];
-        existingName.append(QLatin1Char(','));
-        existingName.append(busName);
-        m_nameOwners[nameOwner] = existingName;
-    } else {
-        m_nameOwners[nameOwner] = busName;
-    }
 }
 
 
@@ -197,38 +203,67 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
                 DBusBasicValue value;
                 dbus_message_iter_get_basic(&subiter, &value);
                 const QString nextName = QString::fromUtf8(value.str);
-                if (!nextName.startsWith(QLatin1Char(':'))) {
-                    knownNames.append(nextName);
-                }
+                //if (!nextName.startsWith(QLatin1Char(':'))) {
+                knownNames.append(nextName);
+                //}
             } while(dbus_message_iter_next(&subiter));
         }
     } while(dbus_message_iter_next(&diter));
     dbus_message_unref(dreply);
     dbus_message_unref(dmsg);
 
-    // for each known name request its owner
+    // for each known name request its owner and pid
     for (const QString &busName: knownNames) {
-        dmsg = dbus_message_new_method_call(
-                    DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetNameOwner");
-        if (!dmsg) {
-            tool_oom("create new message");
-        }
-        std::string stds = busName.toStdString();
-        const char *str_ptr = stds.c_str();
-        dbus_message_append_args(dmsg, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID);
-        dbus_error_init(&derror);
-        dreply = dbus_connection_send_with_reply_and_block(m_dconn, dmsg, 15000, &derror);
-        if (dreply) {
-            dbus_error_init(&derror);
-            if (!dbus_message_get_args(dreply, &derror, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID)) {
-                qCWarning(logMon) << "Failed to read name owner reply args:" << derror.message;
-                dbus_error_free(&derror);
+        // query name owner
+        if (!busName.startsWith(QLatin1Char(':'))) {
+            dmsg = dbus_message_new_method_call(
+                        DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetNameOwner");
+            if (!dmsg) {
+                tool_oom("create new message");
             }
-            const QString nameOwner = QString::fromUtf8(str_ptr);
-            addNameOwner(busName, nameOwner);
+            std::string stds = busName.toStdString();
+            const char *str_ptr = stds.c_str();
+            dbus_message_append_args(dmsg, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID);
+            dbus_error_init(&derror);
+            dreply = dbus_connection_send_with_reply_and_block(m_dconn, dmsg, 15000, &derror);
+            if (dreply) {
+                dbus_error_init(&derror);
+                if (!dbus_message_get_args(dreply, &derror, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID)) {
+                    qCWarning(logMon) << "Failed to read name owner reply args:" << derror.message;
+                    dbus_error_free(&derror);
+                }
+                const QString nameOwner = QString::fromUtf8(str_ptr);
+                addNameOwner(busName, nameOwner);
+            }
+            dbus_message_unref(dreply);
+            dbus_message_unref(dmsg);
         }
-        dbus_message_unref(dreply);
-        dbus_message_unref(dmsg);
+
+        // query name PID
+        {
+            dmsg = dbus_message_new_method_call(
+                        DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixProcessID");
+            if (!dmsg) {
+                tool_oom("create new message");
+            }
+            std::string stds = busName.toStdString();
+            const char *str_ptr = stds.c_str();
+            dbus_message_append_args(dmsg, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID);
+            dbus_error_init(&derror);
+            dreply = dbus_connection_send_with_reply_and_block(m_dconn, dmsg, 15000, &derror);
+            if (dreply) {
+                dbus_error_init(&derror);
+                uint namePid = 0;
+                if (!dbus_message_get_args(dreply, &derror, DBUS_TYPE_UINT32, &namePid, DBUS_TYPE_INVALID)) {
+                    qCWarning(logMon) << "Failed to read name owner pid:" << derror.message;
+                    dbus_error_free(&derror);
+                }
+                addNamePid(busName, namePid);
+                qCDebug(logMon) << busName << namePid;
+            }
+            dbus_message_unref(dreply);
+            dbus_message_unref(dmsg);
+        }
     }
 
     // Receive o.fd.Peer messages as normal messages, rather than having
@@ -271,12 +306,40 @@ void DBusMonitorThreadPrivate::closeDbusConn()
 }
 
 
+void DBusMonitorThreadPrivate::addNameOwner(const QString &busName, const QString &nameOwner)
+{
+    if (m_nameOwners.contains(nameOwner)) {
+        QString existingName = m_nameOwners[nameOwner];
+        existingName.append(QLatin1Char(','));
+        existingName.append(busName);
+        m_nameOwners[nameOwner] = existingName;
+    } else {
+        m_nameOwners[nameOwner] = busName;
+    }
+}
+
+
+void DBusMonitorThreadPrivate::addNamePid(const QString &busName, uint pid)
+{
+    m_addrPids[busName] = pid;
+}
+
+
 QString DBusMonitorThreadPrivate::resolveDBusAddressToName(const QString &addr)
 {
     if (m_nameOwners.contains(addr)) {
         return m_nameOwners[addr];
     }
     return addr;
+}
+
+uint DBusMonitorThreadPrivate::resolvePid(const QString &addr)
+{
+    if (m_addrPids.contains(addr)) {
+        return m_addrPids[addr];
+    }
+    qCDebug(logMon) << "Cannot resolve PID for:" << addr;
+    return 0;
 }
 
 
@@ -333,8 +396,15 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
         thisIsMyMessage = true;
     }
 
+    messageObj.senderPid = owner->d_ptr->resolvePid(messageObj.sender);
     messageObj.sender = owner->d_ptr->resolveDBusAddressToName(messageObj.sender);
     messageObj.destination = owner->d_ptr->resolveDBusAddressToName(messageObj.destination);
+
+#ifdef Q_OS_LINUX
+    if (messageObj.senderPid > 0) {
+        messageObj.senderExe = pid2filename(messageObj.senderPid);
+    }
+#endif
 
     // maybe some other processing required
     if (!thisIsMyMessage) {
