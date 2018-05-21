@@ -55,3 +55,19 @@ QVariant DBusMessagesModel::data(const QModelIndex &index, int role) const
     }
     return ret;
 }
+
+void DBusMessagesModel::addMessage(const DBusMessageObject &dmsg)
+{
+    QMutexLocker guard(&m_mutex);
+    beginInsertRows(QModelIndex(), m_data.size(), m_data.size());
+    m_data.append(dmsg);
+    endInsertRows();
+}
+
+void DBusMessagesModel::addMessage(DBusMessageObject &&dmsg)
+{
+    QMutexLocker guard(&m_mutex);
+    beginInsertRows(QModelIndex(), m_data.size(), m_data.size());
+    m_data.append(dmsg);
+    endInsertRows();
+}
