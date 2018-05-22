@@ -78,6 +78,7 @@ public:
     QString queryNameOwner(const QString &busName);
 
     void addNameOwner(const QString &busName, const QString &busAddr);
+    void removeNameOwner(const QString &busAddr, const QString &busName);
     void addNamePid(const QString &busName, uint pid);
     QStringList resolveDBusAddressToName(const QString &addr);
     QString resolveNameAddress(const QString &name);
@@ -370,6 +371,14 @@ void DBusMonitorThreadPrivate::addNameOwner(const QString &busName, const QStrin
     }
 }
 
+void DBusMonitorThreadPrivate::removeNameOwner(const QString &busAddr, const QString &busName)
+{
+    if (m_addrNames.contains(busAddr)) {
+        QStringList &namesList = m_addrNames[busAddr];
+        namesList.removeAll(busName);
+    }
+}
+
 
 void DBusMonitorThreadPrivate::addNamePid(const QString &busName, uint pid)
 {
@@ -457,6 +466,26 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
                     owner->d_ptr->addNameOwner(newName, nameOwner);
                     qCDebug(logMon) << "new name on bus: " << newName << nameOwner;
                 }
+            }
+        }
+    }
+
+    // handle messages from DBus about names gone
+    if (dbus_message_is_signal(message, DBUS_INTERFACE_DBUS, "NameLost")) {
+        // NameLost(STRING name)
+        char *str_ptr = nullptr;
+        DBusError derror = DBUS_ERROR_INIT;
+        if (dbus_message_get_args(message, &derror, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID)) {
+            const QString busName = QString::fromUtf8(str_ptr);
+            const QString busAddr = QString::fromUtf8(dbus_message_get_destination(message));
+            //qCDebug(logMon) << "NameLost:" << busName << busAddr;
+            // NameLost: ":1.1319" :1.1319
+            // NameLost: "org.dharkael.Flameshot" :1.1225
+
+            // name may be numeric, if so, no need to delete it
+            if (!isNumericAddress(busName)) {
+                owner->d_ptr->removeNameOwner(busAddr, busName);
+                qCDebug(logMon) << "remove name:" << busName << "from" << busAddr;
             }
         }
     }
