@@ -260,7 +260,6 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
                     dbus_error_free(&derror);
                 }
                 addNamePid(busName, namePid);
-                qCDebug(logMon) << busName << namePid;
             }
             dbus_message_unref(dreply);
             dbus_message_unref(dmsg);
