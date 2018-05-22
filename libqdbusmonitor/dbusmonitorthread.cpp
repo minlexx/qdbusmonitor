@@ -71,6 +71,7 @@ public:
     void addNameOwner(const QString &busName, const QString &nameOwner);
     void addNamePid(const QString &busName, uint pid);
     QString resolveDBusAddressToName(const QString &addr);
+    QString resolveNameAddress(const QString &name);
     uint resolvePid(const QString &addr);
 
     static DBusHandlerResult monitorFunc(
@@ -333,8 +334,27 @@ QString DBusMonitorThreadPrivate::resolveDBusAddressToName(const QString &addr)
     return addr;
 }
 
+QString DBusMonitorThreadPrivate::resolveNameAddress(const QString &name)
+{
+    for (const QString &addr: m_nameOwners.keys()) {
+        const QString &names = m_nameOwners[addr];
+        if (names == name) {
+            return addr;
+        }
+        const QString namePre = QLatin1String(",") + name;
+        const QString namePost = name + QLatin1String(",");
+        if (names.contains(namePre) || names.contains(namePost)) {
+            return addr;
+        }
+    }
+    return QString();
+}
+
 uint DBusMonitorThreadPrivate::resolvePid(const QString &addr)
 {
+    if (addr.isEmpty()) {
+        return 0;
+    }
     if (m_addrPids.contains(addr)) {
         return m_addrPids[addr];
     }
@@ -350,18 +370,17 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
 {
     Q_UNUSED(connection)
     DBusMonitorThread *owner = static_cast<DBusMonitorThread *>(user_data);
-    // qCDebug(logMon) << "DBus message received by filter!";
 
     if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL, "Disconnected")) {
-        // exit(0);
-        // QCoreApplication::quit();
         Q_EMIT owner->dbusDisconnected();
+        return DBUS_HANDLER_RESULT_HANDLED;
     }
 
     // get base message properties
     DBusMessageObject messageObj;
-    messageObj.sender = QString::fromUtf8(dbus_message_get_sender(message));
-    messageObj.destination = QString::fromUtf8(dbus_message_get_destination(message));
+    messageObj.senderAddress = QString::fromUtf8(dbus_message_get_sender(message));
+    messageObj.destinationAddress = QString::fromUtf8(dbus_message_get_destination(message));
+    // destinationAddress may be in form of numeric address ":x.y" or in form of bus name "org.kde.xxxx"
     messageObj.type = dbus_message_get_type (message);
     messageObj.typeString = dbusMessageTypeToString(messageObj.type);
 
@@ -390,19 +409,27 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     dbus_message_iter_init(message, &iter);
     // TODO: get message contents
 
+    if (!messageObj.destinationAddress.startsWith(QLatin1Char(':'))) {
+        messageObj.destinationAddress = owner->d_ptr->resolveNameAddress(messageObj.destinationAddress);
+    }
+
     bool thisIsMyMessage = false;
-    if ((messageObj.sender == owner->d_ptr->m_myName)
-            || (messageObj.destination == owner->d_ptr->m_myName)) {
+    if ((messageObj.senderAddress == owner->d_ptr->m_myName)
+            || (messageObj.destinationAddress == owner->d_ptr->m_myName)) {
         thisIsMyMessage = true;
     }
 
-    messageObj.senderPid = owner->d_ptr->resolvePid(messageObj.sender);
-    messageObj.sender = owner->d_ptr->resolveDBusAddressToName(messageObj.sender);
-    messageObj.destination = owner->d_ptr->resolveDBusAddressToName(messageObj.destination);
+    messageObj.senderPid = owner->d_ptr->resolvePid(messageObj.senderAddress);
+    messageObj.senderName = owner->d_ptr->resolveDBusAddressToName(messageObj.senderAddress);
+    messageObj.destinationPid = owner->d_ptr->resolvePid(messageObj.destinationAddress);
+    messageObj.destinationName = owner->d_ptr->resolveDBusAddressToName(messageObj.destinationAddress);
 
 #ifdef Q_OS_LINUX
     if (messageObj.senderPid > 0) {
         messageObj.senderExe = pid2filename(messageObj.senderPid);
+    }
+    if (messageObj.destinationPid > 0) {
+        messageObj.destinationExe = pid2filename(messageObj.destinationPid);
     }
 #endif
 
