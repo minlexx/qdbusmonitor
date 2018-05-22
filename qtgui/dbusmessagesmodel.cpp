@@ -9,17 +9,21 @@ DBusMessagesModel::DBusMessagesModel(QObject *parent)
 QHash<int, QByteArray> DBusMessagesModel::roleNames() const
 {
     static const QHash<int, QByteArray> r = {
-        {Serial,       QByteArrayLiteral("serial")},
-        {ReplySerial,  QByteArrayLiteral("replySerial")},
-        {Type,         QByteArrayLiteral("type")},
-        {TypeString,   QByteArrayLiteral("typeString")},
-        {Sender,       QByteArrayLiteral("sender")},
-        {Destination,  QByteArrayLiteral("destination")},
-        {Path,         QByteArrayLiteral("path")},
-        {Interface,    QByteArrayLiteral("interface")},
-        {Member,       QByteArrayLiteral("member")},
-        {SenderPid,    QByteArrayLiteral("senderPid")},
-        {SenderExe,    QByteArrayLiteral("senderExe")},
+        {Serial,             QByteArrayLiteral("serial")},
+        {ReplySerial,        QByteArrayLiteral("replySerial")},
+        {Type,               QByteArrayLiteral("type")},
+        {TypeString,         QByteArrayLiteral("typeString")},
+        {SenderAddress,      QByteArrayLiteral("senderAddress")},
+        {SenderName,         QByteArrayLiteral("senderName")},
+        {SenderPid,          QByteArrayLiteral("senderPid")},
+        {SenderExe,          QByteArrayLiteral("senderExe")},
+        {DestinationAddress, QByteArrayLiteral("destinationAddress")},
+        {DestinationName,    QByteArrayLiteral("destinationName")},
+        {DestinationPid,     QByteArrayLiteral("destinationPid")},
+        {DestinationExe,     QByteArrayLiteral("destinationExe")},
+        {Path,               QByteArrayLiteral("path")},
+        {Interface,          QByteArrayLiteral("interface")},
+        {Member,             QByteArrayLiteral("member")},
     };
     return r;
 }
@@ -47,17 +51,21 @@ QVariant DBusMessagesModel::data(const QModelIndex &index, int role) const
 
     const DBusMessageObject &dmsg = m_data.at(row);
     switch (role) {
-    case Role::Serial:        ret = dmsg.serial;       break;
-    case Role::ReplySerial:   ret = dmsg.replySerial;  break;
-    case Role::Type:          ret = dmsg.type;         break;
-    case Role::TypeString:    ret = dmsg.typeString;   break;
-    case Role::Sender:        ret = dmsg.sender;       break;
-    case Role::Destination:   ret = dmsg.destination;  break;
-    case Role::Path:          ret = dmsg.path;         break;
-    case Role::Interface:     ret = dmsg.interface;    break;
-    case Role::Member:        ret = dmsg.member;       break;
-    case Role::SenderPid:     ret = dmsg.senderPid;    break;
-    case Role::SenderExe:     ret = dmsg.senderExe;    break;
+    case Role::Serial:             ret = dmsg.serial;             break;
+    case Role::ReplySerial:        ret = dmsg.replySerial;        break;
+    case Role::Type:               ret = dmsg.type;               break;
+    case Role::TypeString:         ret = dmsg.typeString;         break;
+    case Role::SenderAddress:      ret = dmsg.senderAddress;      break;
+    case Role::SenderName:         ret = dmsg.senderName;         break;
+    case Role::SenderPid:          ret = dmsg.senderPid;          break;
+    case Role::SenderExe:          ret = dmsg.senderExe;          break;
+    case Role::DestinationAddress: ret = dmsg.destinationAddress; break;
+    case Role::DestinationName:    ret = dmsg.destinationName;    break;
+    case Role::DestinationPid:     ret = dmsg.destinationPid;     break;
+    case Role::DestinationExe:     ret = dmsg.destinationExe;     break;
+    case Role::Path:               ret = dmsg.path;               break;
+    case Role::Interface:          ret = dmsg.interface;          break;
+    case Role::Member:             ret = dmsg.member;             break;
     }
     return ret;
 }

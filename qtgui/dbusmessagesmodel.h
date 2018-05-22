@@ -20,14 +20,17 @@ public:
         ReplySerial,
         Type,
         TypeString,
-        Sender,
-        Destination,
+        SenderAddress,
+        SenderName,
+        SenderPid,
+        SenderExe,
+        DestinationAddress,
+        DestinationName,
+        DestinationPid,
+        DestinationExe,
         Path,
         Interface,
         Member,
-        //
-        SenderPid,
-        SenderExe,
     };
 
 public:
