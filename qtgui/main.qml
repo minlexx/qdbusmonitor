@@ -6,7 +6,7 @@ Window {
     visible: true
     width: 640
     height: 480
-    title: qsTr("Hello World")
+    title: qsTr("QDBusMonitor")
 
     Flow {
         id: flow1
@@ -61,11 +61,17 @@ Window {
             bottom: parent.bottom
         }
         model: app.messagesModel
+        interactive: true
+
         delegate: ItemDelegate {
             id: delegate
-            implicitHeight: col1.height
+            height: col1.height
+            width: parent.width
+            highlighted: ListView.isCurrentItem
+
             property bool isSignal: model.typeString === "signal"
             property bool isError:  model.typeString === "error"
+
             Column {
                 id: col1
                 Row {
@@ -75,23 +81,36 @@ Window {
                         id: txtType
                         text: "(" + model.typeString + ") "
                     }
-                    //Text { text: model.sender }
                     Text {
-                        text: model.senderExe !== "" ? model.senderExe : model.sender
+                        text: "[" + model.senderAddress + "]"
+                    }
+                    Text {
+                        text: model.senderExe !== "" ? model.senderExe : model.senderName
                     }
                     Text {
                         text: "  =>  "
                         visible: !delegate.isSignal
                     }
                     Text {
-                        text: model.destination
+                        text: "[" + model.destinationAddress + "]"
                         visible: !delegate.isSignal
+                    }
+                    Text {
+                        text: model.destinationExe !== "" ? model.destinationExe : model.destinationName
+                        visible: (!delegate.isSignal) && (model.destinationName !== model.destinationAddress)
                     }
                     Text { text: model.path }
                     Text { text: model.interface }
                     Text { text: model.member }
                 }
             }
+
+            onClicked: {
+                console.log("Clicked index ", index);
+                messagesView.currentIndex = index;
+            }
         }
+
+        ScrollIndicator.vertical: ScrollIndicator { }
     }
 }
