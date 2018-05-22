@@ -72,6 +72,11 @@ Window {
             property bool isSignal: model.typeString === "signal"
             property bool isError:  model.typeString === "error"
 
+            property string senderNamesStr: model.senderNames.join(",")
+            property string destinationNamesStr: model.destinationNames.join(",")
+            // ^^ creates a string like: "org.freedesktop.Notifications,org.kde.StatusNotifierHost-4344,
+            //                            org.kde.plasmashell,com.canonical.Unity"
+
             Column {
                 id: col1
                 Row {
@@ -85,7 +90,7 @@ Window {
                         text: "[" + model.senderAddress + "]"
                     }
                     Text {
-                        text: model.senderExe !== "" ? model.senderExe : model.senderName
+                        text: model.senderExe !== "" ? model.senderExe : senderNamesStr
                     }
                     Text {
                         text: "  =>  "
@@ -96,7 +101,7 @@ Window {
                         visible: !delegate.isSignal
                     }
                     Text {
-                        text: model.destinationExe !== "" ? model.destinationExe : model.destinationName
+                        text: model.destinationExe !== "" ? model.destinationExe : destinationNamesStr
                         visible: (!delegate.isSignal) && (model.destinationName !== model.destinationAddress)
                     }
                     Text { text: model.path }
@@ -106,7 +111,6 @@ Window {
             }
 
             onClicked: {
-                console.log("Clicked index ", index);
                 messagesView.currentIndex = index;
             }
         }

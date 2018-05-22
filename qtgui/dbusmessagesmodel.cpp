@@ -14,11 +14,11 @@ QHash<int, QByteArray> DBusMessagesModel::roleNames() const
         {Type,               QByteArrayLiteral("type")},
         {TypeString,         QByteArrayLiteral("typeString")},
         {SenderAddress,      QByteArrayLiteral("senderAddress")},
-        {SenderName,         QByteArrayLiteral("senderName")},
+        {SenderNames,        QByteArrayLiteral("senderNames")},
         {SenderPid,          QByteArrayLiteral("senderPid")},
         {SenderExe,          QByteArrayLiteral("senderExe")},
         {DestinationAddress, QByteArrayLiteral("destinationAddress")},
-        {DestinationName,    QByteArrayLiteral("destinationName")},
+        {DestinationNames,   QByteArrayLiteral("destinationNames")},
         {DestinationPid,     QByteArrayLiteral("destinationPid")},
         {DestinationExe,     QByteArrayLiteral("destinationExe")},
         {Path,               QByteArrayLiteral("path")},
@@ -56,11 +56,11 @@ QVariant DBusMessagesModel::data(const QModelIndex &index, int role) const
     case Role::Type:               ret = dmsg.type;               break;
     case Role::TypeString:         ret = dmsg.typeString;         break;
     case Role::SenderAddress:      ret = dmsg.senderAddress;      break;
-    case Role::SenderName:         ret = dmsg.senderName;         break;
+    case Role::SenderNames:        ret = dmsg.senderNames;        break;
     case Role::SenderPid:          ret = dmsg.senderPid;          break;
     case Role::SenderExe:          ret = dmsg.senderExe;          break;
     case Role::DestinationAddress: ret = dmsg.destinationAddress; break;
-    case Role::DestinationName:    ret = dmsg.destinationName;    break;
+    case Role::DestinationNames:   ret = dmsg.destinationNames;   break;
     case Role::DestinationPid:     ret = dmsg.destinationPid;     break;
     case Role::DestinationExe:     ret = dmsg.destinationExe;     break;
     case Role::Path:               ret = dmsg.path;               break;
