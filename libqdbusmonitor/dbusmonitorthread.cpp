@@ -68,6 +68,8 @@ public:
     bool startBus(DBusBusType type = DBUS_BUS_SESSION);
     void closeDbusConn();
 
+    uint queryBusNameUnixPid(const QString &busName);
+
     void addNameOwner(const QString &busName, const QString &nameOwner);
     void addNamePid(const QString &busName, uint pid);
     QString resolveDBusAddressToName(const QString &addr);
@@ -83,9 +85,11 @@ public:
 
 public:
     DBusConnection *m_dconn = nullptr;
+    DBusConnection *m_dconn2 = nullptr;
     DBusMonitorThread *owner = nullptr;
     bool m_monitor_active = false;
     QString m_myName;
+    QString m_myName2;
     QHash<QString, QString> m_nameOwners;
     QHash<QString, uint> m_addrPids;
 };
@@ -142,23 +146,37 @@ bool DBusMonitorThreadPrivate::becomeMonitor()
 
 bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
 {
-    if (m_dconn) {
+    if (m_dconn || m_dconn2) {
         qCDebug(logMon) << "Already running!";
         return false;
     }
     m_dconn = nullptr;
-    DBusError derror = DBUS_ERROR_INIT;
 
+    DBusError derror;
     dbus_error_init(&derror);
+
     m_dconn = dbus_bus_get(type, &derror);
     if (!m_dconn) {
-        qCWarning(logMon) << "Failed to open dbus connction" << derror.message;
+        qCWarning(logMon) << "Failed to open dbus connction:" << derror.message;
         dbus_error_free(&derror);
         return false;
     }
 
+    // open second private connection to bus
+    dbus_error_init(&derror);
+    // Unlike dbus_connection_open(), always creates a new connection.
+    //   This connection will not be saved or recycled by libdbus.
+    m_dconn2 = dbus_bus_get_private(type, &derror);
+    if (!m_dconn2) {
+        qCWarning(logMon) << "Failed to open second dbus connction:" << derror.message;
+        dbus_error_free(&derror);
+        closeDbusConn();
+        return false;
+    }
+
     m_myName = QString::fromUtf8(dbus_bus_get_unique_name(m_dconn));
-    qCDebug(logMon) << "Connected to D_Bus as: " << m_myName;
+    m_myName2 = QString::fromUtf8(dbus_bus_get_unique_name(m_dconn2));
+    qCDebug(logMon) << "Connected to D_Bus as: " << m_myName << m_myName2;
 
     qCDebug(logMon).nospace() << "Compiled with libdbus version: " << DBUS_MAJOR_VERSION
                               << "." << DBUS_MINOR_VERSION
@@ -235,34 +253,15 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
                 }
                 const QString nameOwner = QString::fromUtf8(str_ptr);
                 addNameOwner(busName, nameOwner);
+                dbus_message_unref(dreply);
             }
-            dbus_message_unref(dreply);
             dbus_message_unref(dmsg);
         }
 
         // query name PID
-        {
-            dmsg = dbus_message_new_method_call(
-                        DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixProcessID");
-            if (!dmsg) {
-                tool_oom("create new message");
-            }
-            std::string stds = busName.toStdString();
-            const char *str_ptr = stds.c_str();
-            dbus_message_append_args(dmsg, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID);
-            dbus_error_init(&derror);
-            dreply = dbus_connection_send_with_reply_and_block(m_dconn, dmsg, 15000, &derror);
-            if (dreply) {
-                dbus_error_init(&derror);
-                uint namePid = 0;
-                if (!dbus_message_get_args(dreply, &derror, DBUS_TYPE_UINT32, &namePid, DBUS_TYPE_INVALID)) {
-                    qCWarning(logMon) << "Failed to read name owner pid:" << derror.message;
-                    dbus_error_free(&derror);
-                }
-                addNamePid(busName, namePid);
-            }
-            dbus_message_unref(dreply);
-            dbus_message_unref(dmsg);
+        uint namePid = queryBusNameUnixPid(busName);
+        if (namePid > 0) {
+            addNamePid(busName, namePid);
         }
     }
 
@@ -302,7 +301,46 @@ void DBusMonitorThreadPrivate::closeDbusConn()
         dbus_connection_unref(m_dconn);
         m_dconn = nullptr;
     }
+    if (m_dconn2) {
+        // For private connections, the creator of the connection
+        //  must arrange for dbus_connection_close()
+        // When you are done with this connection, you must dbus_connection_close()
+        //  to disconnect it, and dbus_connection_unref() to free the connection object.
+        dbus_connection_close(m_dconn2);
+        dbus_connection_unref(m_dconn2);
+        m_dconn2 = nullptr;
+    }
     m_monitor_active = false;
+}
+
+uint DBusMonitorThreadPrivate::queryBusNameUnixPid(const QString &busName)
+{
+    uint namePid = 0;
+    DBusError derror;
+    DBusMessage *dmsg = dbus_message_new_method_call(
+                DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixProcessID");
+    if (!dmsg) {
+        tool_oom("create new message");
+    }
+    std::string stds = busName.toStdString();
+    const char *str_ptr = stds.c_str();
+    dbus_message_append_args(dmsg, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID);
+    dbus_error_init(&derror);
+    DBusMessage *dreply = dbus_connection_send_with_reply_and_block(m_dconn2, dmsg, 15000, &derror);
+    if (dreply) {
+        dbus_error_init(&derror);
+        if (!dbus_message_get_args(dreply, &derror, DBUS_TYPE_UINT32, &namePid, DBUS_TYPE_INVALID)) {
+            qCWarning(logMon) << "Failed to read name owner pid:" << derror.message;
+            dbus_error_free(&derror);
+        }
+        dbus_message_unref(dreply);
+    } else {
+        qCWarning(logMon) << "WARNING: Call to GetConnectionUnixProcessID() failed! null reply!"
+                          << derror.message;
+        dbus_error_free(&derror);
+    }
+    dbus_message_unref(dmsg);
+    return namePid;
 }
 
 
@@ -383,6 +421,19 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     messageObj.type = dbus_message_get_type (message);
     messageObj.typeString = dbusMessageTypeToString(messageObj.type);
 
+    // handle messages from DBus about new clients/names
+    if (dbus_message_is_method_call(message, DBUS_INTERFACE_DBUS, "Hello")) {
+        // new bus client connected
+        qCDebug(logMon) << "new client connected:" << messageObj.senderAddress;
+        uint namePid = owner->d_ptr->queryBusNameUnixPid(messageObj.senderAddress);
+        if (namePid > 0) {
+            qCDebug(logMon) << "   new client PID:" << namePid;
+            owner->d_ptr->addNamePid(messageObj.senderAddress, namePid);
+        } else {
+            qCWarning(logMon) << "   failed to query unix PID for new client!";
+        }
+    }
+
     switch (messageObj.type) {
         case DBUS_MESSAGE_TYPE_METHOD_CALL:
         case DBUS_MESSAGE_TYPE_SIGNAL:
@@ -415,6 +466,10 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     bool thisIsMyMessage = false;
     if ((messageObj.senderAddress == owner->d_ptr->m_myName)
             || (messageObj.destinationAddress == owner->d_ptr->m_myName)) {
+        thisIsMyMessage = true;
+    }
+    if ((messageObj.senderAddress == owner->d_ptr->m_myName2)
+            || (messageObj.destinationAddress == owner->d_ptr->m_myName2)) {
         thisIsMyMessage = true;
     }
 
