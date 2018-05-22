@@ -77,9 +77,9 @@ public:
     uint queryBusNameUnixPid(const QString &busName);
     QString queryNameOwner(const QString &busName);
 
-    void addNameOwner(const QString &busName, const QString &nameOwner);
+    void addNameOwner(const QString &busName, const QString &busAddr);
     void addNamePid(const QString &busName, uint pid);
-    QString resolveDBusAddressToName(const QString &addr);
+    QStringList resolveDBusAddressToName(const QString &addr);
     QString resolveNameAddress(const QString &name);
     uint resolvePid(const QString &addr);
 
@@ -96,7 +96,7 @@ public:
     DBusMonitorThread *owner = nullptr;
     QString m_myName;
     QString m_myName2;
-    QHash<QString, QString> m_nameOwners;
+    QHash<QString, QStringList> m_addrNames;
     QHash<QString, uint> m_addrPids;
     bool m_monitor_active = false;
 };
@@ -359,15 +359,14 @@ QString DBusMonitorThreadPrivate::queryNameOwner(const QString &busName)
 }
 
 
-void DBusMonitorThreadPrivate::addNameOwner(const QString &busName, const QString &nameOwner)
+void DBusMonitorThreadPrivate::addNameOwner(const QString &busName, const QString &busAddr)
 {
-    if (m_nameOwners.contains(nameOwner)) {
-        QString existingName = m_nameOwners[nameOwner];
-        existingName.append(QLatin1Char(','));
-        existingName.append(busName);
-        m_nameOwners[nameOwner] = existingName;
+    if (m_addrNames.contains(busAddr)) {
+        QStringList &namesList = m_addrNames[busAddr];
+        namesList.append(busName);
     } else {
-        m_nameOwners[nameOwner] = busName;
+        QStringList namesList{busName};
+        m_addrNames[busAddr] = namesList;
     }
 }
 
@@ -378,24 +377,19 @@ void DBusMonitorThreadPrivate::addNamePid(const QString &busName, uint pid)
 }
 
 
-QString DBusMonitorThreadPrivate::resolveDBusAddressToName(const QString &addr)
+QStringList DBusMonitorThreadPrivate::resolveDBusAddressToName(const QString &addr)
 {
-    if (m_nameOwners.contains(addr)) {
-        return m_nameOwners[addr];
+    if (m_addrNames.contains(addr)) {
+        return m_addrNames[addr];
     }
-    return addr;
+    return QStringList();
 }
 
 QString DBusMonitorThreadPrivate::resolveNameAddress(const QString &name)
 {
-    for (const QString &addr: m_nameOwners.keys()) {
-        const QString &names = m_nameOwners[addr];
-        if (names == name) {
-            return addr;
-        }
-        const QString namePre = QLatin1String(",") + name;
-        const QString namePost = name + QLatin1String(",");
-        if (names.contains(namePre) || names.contains(namePost)) {
+    for (const QString &addr: m_addrNames.keys()) {
+        const QStringList &names = m_addrNames[addr];
+        if (names.contains(name)) {
             return addr;
         }
     }
@@ -507,9 +501,9 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     }
 
     messageObj.senderPid = owner->d_ptr->resolvePid(messageObj.senderAddress);
-    messageObj.senderName = owner->d_ptr->resolveDBusAddressToName(messageObj.senderAddress);
+    messageObj.senderNames = owner->d_ptr->resolveDBusAddressToName(messageObj.senderAddress);
     messageObj.destinationPid = owner->d_ptr->resolvePid(messageObj.destinationAddress);
-    messageObj.destinationName = owner->d_ptr->resolveDBusAddressToName(messageObj.destinationAddress);
+    messageObj.destinationNames = owner->d_ptr->resolveDBusAddressToName(messageObj.destinationAddress);
 
 #ifdef Q_OS_LINUX
     if (messageObj.senderPid > 0) {

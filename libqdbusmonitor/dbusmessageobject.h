@@ -2,6 +2,7 @@
 #define DBUSMESSAGEOBJECT_H
 
 #include <QObject>
+#include <QList>
 
 class DBusMessageObject
 {
@@ -24,10 +25,10 @@ public:
     uint    destinationPid = 0;
     QString typeString;
     QString senderAddress;
-    QString senderName;
+    QStringList senderNames;
     QString senderExe;
     QString destinationAddress;
-    QString destinationName;
+    QStringList destinationNames;
     QString destinationExe;
     QString path;
     QString interface;
