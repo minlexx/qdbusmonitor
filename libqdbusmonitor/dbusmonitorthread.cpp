@@ -2,6 +2,7 @@
 #include <QHash>
 #include <QDebug>
 #include <QLoggingCategory>
+#include <QList>
 
 #ifdef Q_OS_LINUX
 #include <unistd.h>
@@ -42,6 +43,11 @@ QString dbusMessageTypeToString(int message_type)
 }
 
 
+static bool isNumericAddress(const QString &busName) {
+    return busName.startsWith(QLatin1Char(':'));
+}
+
+
 [[noreturn]] static void tool_oom(const char *where)
 {
     qCCritical(logMon) << "Out of memoory:" << where;
@@ -69,6 +75,7 @@ public:
     void closeDbusConn();
 
     uint queryBusNameUnixPid(const QString &busName);
+    QString queryNameOwner(const QString &busName);
 
     void addNameOwner(const QString &busName, const QString &nameOwner);
     void addNamePid(const QString &busName, uint pid);
@@ -87,11 +94,11 @@ public:
     DBusConnection *m_dconn = nullptr;
     DBusConnection *m_dconn2 = nullptr;
     DBusMonitorThread *owner = nullptr;
-    bool m_monitor_active = false;
     QString m_myName;
     QString m_myName2;
     QHash<QString, QString> m_nameOwners;
     QHash<QString, uint> m_addrPids;
+    bool m_monitor_active = false;
 };
 
 
@@ -222,9 +229,7 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
                 DBusBasicValue value;
                 dbus_message_iter_get_basic(&subiter, &value);
                 const QString nextName = QString::fromUtf8(value.str);
-                //if (!nextName.startsWith(QLatin1Char(':'))) {
                 knownNames.append(nextName);
-                //}
             } while(dbus_message_iter_next(&subiter));
         }
     } while(dbus_message_iter_next(&diter));
@@ -234,28 +239,11 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
     // for each known name request its owner and pid
     for (const QString &busName: knownNames) {
         // query name owner
-        if (!busName.startsWith(QLatin1Char(':'))) {
-            dmsg = dbus_message_new_method_call(
-                        DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetNameOwner");
-            if (!dmsg) {
-                tool_oom("create new message");
-            }
-            std::string stds = busName.toStdString();
-            const char *str_ptr = stds.c_str();
-            dbus_message_append_args(dmsg, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID);
-            dbus_error_init(&derror);
-            dreply = dbus_connection_send_with_reply_and_block(m_dconn, dmsg, 15000, &derror);
-            if (dreply) {
-                dbus_error_init(&derror);
-                if (!dbus_message_get_args(dreply, &derror, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID)) {
-                    qCWarning(logMon) << "Failed to read name owner reply args:" << derror.message;
-                    dbus_error_free(&derror);
-                }
-                const QString nameOwner = QString::fromUtf8(str_ptr);
+        if (!isNumericAddress(busName)) {
+            const QString nameOwner = queryNameOwner(busName);
+            if (!nameOwner.isEmpty()) {
                 addNameOwner(busName, nameOwner);
-                dbus_message_unref(dreply);
             }
-            dbus_message_unref(dmsg);
         }
 
         // query name PID
@@ -316,7 +304,7 @@ void DBusMonitorThreadPrivate::closeDbusConn()
 uint DBusMonitorThreadPrivate::queryBusNameUnixPid(const QString &busName)
 {
     uint namePid = 0;
-    DBusError derror;
+    DBusError derror = DBUS_ERROR_INIT;
     DBusMessage *dmsg = dbus_message_new_method_call(
                 DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixProcessID");
     if (!dmsg) {
@@ -341,6 +329,33 @@ uint DBusMonitorThreadPrivate::queryBusNameUnixPid(const QString &busName)
     }
     dbus_message_unref(dmsg);
     return namePid;
+}
+
+QString DBusMonitorThreadPrivate::queryNameOwner(const QString &busName)
+{
+    QString ret;
+    DBusError derror = DBUS_ERROR_INIT;
+    DBusMessage *dmsg = dbus_message_new_method_call(
+                DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetNameOwner");
+    if (!dmsg) {
+        tool_oom("create new message");
+    }
+    std::string stds = busName.toStdString();
+    const char *str_ptr = stds.c_str();
+    dbus_message_append_args(dmsg, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID);
+    dbus_error_init(&derror);
+    DBusMessage *dreply = dbus_connection_send_with_reply_and_block(m_dconn2, dmsg, 15000, &derror);
+    if (dreply) {
+        dbus_error_init(&derror);
+        if (!dbus_message_get_args(dreply, &derror, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID)) {
+            qCWarning(logMon) << "Failed to read name owner reply args:" << derror.message;
+            dbus_error_free(&derror);
+        }
+        ret = QString::fromUtf8(str_ptr);
+        dbus_message_unref(dreply);
+    }
+    dbus_message_unref(dmsg);
+    return ret;
 }
 
 
@@ -421,7 +436,7 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     messageObj.type = dbus_message_get_type (message);
     messageObj.typeString = dbusMessageTypeToString(messageObj.type);
 
-    // handle messages from DBus about new clients/names
+    // handle messages from DBus about new clients
     if (dbus_message_is_method_call(message, DBUS_INTERFACE_DBUS, "Hello")) {
         // new bus client connected
         qCDebug(logMon) << "new client connected:" << messageObj.senderAddress;
@@ -431,6 +446,24 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
             owner->d_ptr->addNamePid(messageObj.senderAddress, namePid);
         } else {
             qCWarning(logMon) << "   failed to query unix PID for new client!";
+        }
+    }
+
+    // handle messages from DBus about new names
+    if (dbus_message_is_signal(message, DBUS_INTERFACE_DBUS, "NameAcquired")) {
+        // NameAcquired(STRING name)
+        char *str_ptr = nullptr;
+        DBusError derror = DBUS_ERROR_INIT;
+        if (dbus_message_get_args(message, &derror, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID)) {
+            const QString newName = QString::fromUtf8(str_ptr);
+            // name may be numeric, if so, no need to resolve it
+            if (!isNumericAddress(newName)) {
+                const QString nameOwner = owner->d_ptr->queryNameOwner(newName);
+                if (!nameOwner.isEmpty()) {
+                    owner->d_ptr->addNameOwner(newName, nameOwner);
+                    qCDebug(logMon) << "new name on bus: " << newName << nameOwner;
+                }
+            }
         }
     }
 
@@ -459,7 +492,7 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     dbus_message_iter_init(message, &iter);
     // TODO: get message contents
 
-    if (!messageObj.destinationAddress.startsWith(QLatin1Char(':'))) {
+    if (!isNumericAddress(messageObj.destinationAddress)) {
         messageObj.destinationAddress = owner->d_ptr->resolveNameAddress(messageObj.destinationAddress);
     }
 
