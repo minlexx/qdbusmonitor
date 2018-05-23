@@ -14,12 +14,12 @@ ItemDelegate {
 
     property string senderAddress: ""
     property string senderExe: ""
-    property var    senderNames: undefined
+    property var    senderNames: undefined // JavaScript array (QStringList)
     property string senderNamesStr: ""
 
     property string destinationAddress: ""
     property string destinationExe: ""
-    property var    destinationNames: undefined
+    property var    destinationNames: undefined // JavaScript array (QStringList)
     property string destinationNamesStr: ""
 
     property string msgPath: ""

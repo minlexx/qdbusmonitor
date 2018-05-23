@@ -4,8 +4,8 @@ import QtQuick.Controls 2.0
 
 Window {
     visible: true
-    width: 640
-    height: 480
+    width: 1152
+    height: 864
     title: qsTr("QDBusMonitor")
 
     Flow {
