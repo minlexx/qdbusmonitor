@@ -43,6 +43,7 @@ public:
 public:
     void addMessage(const DBusMessageObject &dmsg);
     void addMessage(DBusMessageObject &&dmsg);
+    void clear();
 
 private:
     QHash<int, QByteArray> m_roles;

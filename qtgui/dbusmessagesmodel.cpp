@@ -85,3 +85,11 @@ void DBusMessagesModel::addMessage(DBusMessageObject &&dmsg)
     m_data.append(dmsg);
     endInsertRows();
 }
+
+void DBusMessagesModel::clear()
+{
+    QMutexLocker guard(&m_mutex);
+    beginResetModel();
+    m_data.clear();
+    endResetModel();
+}

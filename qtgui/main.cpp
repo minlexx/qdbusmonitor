@@ -72,13 +72,19 @@ public Q_SLOTS:
         }
     }
 
+    void clearLog() {
+        m_messages.clear();
+    }
+
     void onMessageReceived(const DBusMessageObject &dmsg) {
         m_messages.addMessage(dmsg);
+        Q_EMIT autoScroll();
     }
 
 Q_SIGNALS:
     void shouldExitChanged();
     void messagesModelChanged();
+    void autoScroll();
 
 private:
     bool                   m_should_exit = false;
