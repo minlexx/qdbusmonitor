@@ -20,6 +20,7 @@ find_package(Qt5 CONFIG REQUIRED COMPONENTS
 
 add_executable(${PROJECT_NAME}
     "main.cpp"
+    "monitorapp.cpp"
     "dbusmessagesmodel.cpp"
     "qml.qrc"
 )
