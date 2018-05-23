@@ -3,7 +3,7 @@ import QtQuick.Controls 2.0
 
 ItemDelegate {
     id: delegate
-    implicitHeight: col1.height
+    implicitHeight: row1.height
     // width: parent.width // set from parent
     // highlighted: ListView.isCurrentItem // set from parent
 
@@ -37,36 +37,72 @@ ItemDelegate {
         }
     }
 
-    Column {
-        id: col1
-        Row {
-            height: txtType.height
-            spacing: 5
-            Text {
-                id: txtType
-                text: "(" + typeString + ") "
+    Row {
+        id: row1
+        height: senderRect.height
+        spacing: 5
+
+        Rectangle {
+            id: senderRect
+            radius: isSignal ? 10 : 0
+            border.width: 2
+            border.color: isSignal ? "green" : (isError ? "red" : "black")
+            implicitWidth: innerCol1.width
+            implicitHeight: innerCol1.height
+
+
+            Column {
+                id: innerCol1
+                spacing: 5
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.margins: 5
+
+                Text {
+                    id: txtType
+                    text: "(" + typeString + ") "
+                }
+                Text {
+                    text: "[" + senderAddress + "]"
+                }
+                Text {
+                    text: senderExe !== "" ? senderExe : senderNamesStr
+                }
             }
-            Text {
-                text: "[" + senderAddress + "]"
-            }
-            Text {
-                text: senderExe !== "" ? senderExe : senderNamesStr
-            }
-            Text {
-                text: "  =>  "
-                visible: !isSignal
-            }
-            Text {
-                text: "[" + destinationAddress + "]"
-                visible: !isSignal
-            }
-            Text {
-                text: destinationExe !== "" ? destinationExe : destinationNamesStr
-                visible: (!isSignal) && (destinationNamesStr !== destinationAddress)
-            }
-            Text { text: msgPath }
-            Text { text: msgInterface }
-            Text { text: msgMember }
         }
+
+        Text {
+            text: "  =>  "
+            visible: !isSignal
+        }
+
+        Rectangle {
+            id: destRect
+            visible: !isSignal
+            border.width: 2
+            border.color: isError ? "red" : "black"
+            implicitWidth: innerCol2.width
+            implicitHeight: innerCol2.height
+
+            Column {
+                id: innerCol2
+                spacing: 5
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.margins: 5
+
+                Text {
+                    text: "[" + destinationAddress + "]"
+                }
+                Text {
+                    text: destinationExe !== "" ? destinationExe : destinationNamesStr
+                    visible: destinationNamesStr !== destinationAddress
+                }
+            }
+        }
+
+        Text { text: msgPath }
+        Text { text: msgInterface }
+        Text { text: msgMember }
     }
 }
