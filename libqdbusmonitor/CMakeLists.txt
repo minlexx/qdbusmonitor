@@ -18,8 +18,9 @@ find_package(Qt5 CONFIG REQUIRED COMPONENTS
 find_package(LibDBus REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
-    "dbusmonitorthread.cpp"
     "dbusmessageobject.cpp"
+    "dbusmonitorthread.cpp"
+    "dbusmonitorthread_p.cpp"
     "utils.cpp"
 )
 
