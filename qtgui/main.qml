@@ -77,52 +77,26 @@ Window {
         interactive: true
         clip: true
 
-        delegate: ItemDelegate {
+        delegate: DBusMessageDelegate {
             id: delegate
-            height: col1.height
             width: parent.width
             highlighted: ListView.isCurrentItem
 
-            property bool isSignal: model.typeString === "signal"
-            property bool isError:  model.typeString === "error"
+            typeString: model.typeString
+            isSignal: model.typeString === "signal"
+            isError:  model.typeString === "error"
 
-            property string senderNamesStr: model.senderNames.join(",")
-            property string destinationNamesStr: model.destinationNames.join(",")
-            // ^^ creates a string like: "org.freedesktop.Notifications,org.kde.StatusNotifierHost-4344,
-            //                            org.kde.plasmashell,com.canonical.Unity"
+            senderAddress: model.senderAddress
+            senderExe: model.senderExe
+            senderNames: model.senderNames
 
-            Column {
-                id: col1
-                Row {
-                    height: txtType.height
-                    spacing: 5
-                    Text {
-                        id: txtType
-                        text: "(" + model.typeString + ") "
-                    }
-                    Text {
-                        text: "[" + model.senderAddress + "]"
-                    }
-                    Text {
-                        text: model.senderExe !== "" ? model.senderExe : senderNamesStr
-                    }
-                    Text {
-                        text: "  =>  "
-                        visible: !delegate.isSignal
-                    }
-                    Text {
-                        text: "[" + model.destinationAddress + "]"
-                        visible: !delegate.isSignal
-                    }
-                    Text {
-                        text: model.destinationExe !== "" ? model.destinationExe : destinationNamesStr
-                        visible: (!delegate.isSignal) && (model.destinationName !== model.destinationAddress)
-                    }
-                    Text { text: model.path }
-                    Text { text: model.interface }
-                    Text { text: model.member }
-                }
-            }
+            destinationAddress: model.destinationAddress
+            destinationExe: model.destinationExe
+            destinationNames: model.destinationNames
+
+            msgPath: model.path
+            msgInterface: model.interface
+            msgMember: model.member
 
             onClicked: {
                 messagesView.currentIndex = index;
