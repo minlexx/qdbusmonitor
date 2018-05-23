@@ -44,6 +44,19 @@ Window {
         }
 
         Button {
+            text: qsTr("Clear")
+            onClicked: {
+                app.clearLog();
+            }
+        }
+
+        CheckBox {
+            id: cbAutoScroll
+            checked: true
+            text: qsTr("Autoscroll")
+        }
+
+        Button {
             text: qsTr("Quit")
             onClicked: {
                 console.log("Quit from QML!");
@@ -62,6 +75,7 @@ Window {
         }
         model: app.messagesModel
         interactive: true
+        clip: true
 
         delegate: ItemDelegate {
             id: delegate
@@ -116,5 +130,14 @@ Window {
         }
 
         ScrollIndicator.vertical: ScrollIndicator { }
+    }
+
+    Connections {
+        target: app
+        onAutoScroll: {
+            if (cbAutoScroll.checked) {
+                messagesView.positionViewAtEnd();
+            }
+        }
     }
 }
