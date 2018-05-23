@@ -559,7 +559,7 @@ void DBusMonitorThreadPrivate::run()
     m_monitor_active = true;
     Q_EMIT owner->isMonitorActiveChanged();
 
-    while (dbus_connection_read_write_dispatch(m_dconn, 500)) {
+    while (dbus_connection_read_write_dispatch(m_dconn, 250)) {
         if (owner->isInterruptionRequested()) {
             qCDebug(logMon) << "Interruption requested, breaking DBus loop";
             break;
