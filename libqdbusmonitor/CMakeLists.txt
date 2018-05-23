@@ -20,6 +20,7 @@ find_package(LibDBus REQUIRED)
 add_library(${PROJECT_NAME} SHARED
     "dbusmonitorthread.cpp"
     "dbusmessageobject.cpp"
+    "utils.cpp"
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -28,6 +29,7 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
+    BUILD_LIBQDBUSMONITOR
     QT_DEPRECATED_WARNINGS
     QT_NO_CAST_FROM_ASCII
     QT_NO_CAST_TO_ASCII

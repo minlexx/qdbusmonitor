@@ -4,11 +4,8 @@
 #include <QLoggingCategory>
 #include <QList>
 
-#ifdef Q_OS_LINUX
-#include <unistd.h>
-#endif
-
 #include "dbusmonitorthread.h"
+#include "utils.h"
 
 Q_LOGGING_CATEGORY(logMon, "monitor.thread")
 
@@ -22,48 +19,6 @@ Q_LOGGING_CATEGORY(logMon, "monitor.thread")
 #ifndef DBUS_INTERFACE_MONITORING
 // Old libdbus version?
 #define DBUS_INTERFACE_MONITORING     "org.freedesktop.DBus.Monitoring"
-#endif
-
-
-QString dbusMessageTypeToString(int message_type)
-{
-    switch (message_type)
-    {
-    case DBUS_MESSAGE_TYPE_METHOD_CALL:
-        return QStringLiteral("method call");
-    case DBUS_MESSAGE_TYPE_METHOD_RETURN:
-        return QStringLiteral("method return");
-    case DBUS_MESSAGE_TYPE_ERROR:
-        return QStringLiteral("error");
-    case DBUS_MESSAGE_TYPE_SIGNAL:
-        return QStringLiteral("signal");
-    default:
-        return QStringLiteral("(unknown message type)");
-    }
-}
-
-
-static bool isNumericAddress(const QString &busName) {
-    return busName.startsWith(QLatin1Char(':'));
-}
-
-
-[[noreturn]] static void tool_oom(const char *where)
-{
-    qCCritical(logMon) << "Out of memoory:" << where;
-    ::exit(100);
-}
-
-
-#ifdef Q_OS_LINUX
-static QString pid2filename(uint pid)
-{
-    char path[512] = {0};
-    char outbuf[512] = {0};
-    snprintf(path, sizeof(path) - 1, "/proc/%u/exe", pid);
-    readlink(path, outbuf, sizeof(outbuf) - 1);
-    return QString::fromUtf8(outbuf);
-}
 #endif
 
 
@@ -117,18 +72,18 @@ bool DBusMonitorThreadPrivate::becomeMonitor()
                                      "BecomeMonitor");
 
     if (msg == nullptr) {
-        tool_oom ("becoming a monitor");
+        Utils::fatal_oom("becoming a monitor");
     }
 
     dbus_message_iter_init_append(msg, &appender);
 
     if (!dbus_message_iter_open_container(&appender, DBUS_TYPE_ARRAY, "s", &array_appender)) {
-        tool_oom ("opening string array");
+        Utils::fatal_oom("opening string array");
     }
 
     if (!dbus_message_iter_close_container(&appender, &array_appender) ||
             !dbus_message_iter_append_basic(&appender, DBUS_TYPE_UINT32, &zero)) {
-        tool_oom ("finishing arguments");
+        Utils::fatal_oom("finishing arguments");
     }
 
     replyMsg = dbus_connection_send_with_reply_and_block(m_dconn, msg, -1, &error);
@@ -199,7 +154,7 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
     DBusMessage *dmsg = dbus_message_new_method_call(
                 DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "ListNames");
     if (!dmsg) {
-        tool_oom("create new message");
+        Utils::fatal_oom("create new message");
     }
 
     dbus_error_init(&derror);
@@ -240,7 +195,7 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
     // for each known name request its owner and pid
     for (const QString &busName: knownNames) {
         // query name owner
-        if (!isNumericAddress(busName)) {
+        if (!Utils::isNumericAddress(busName)) {
             const QString nameOwner = queryNameOwner(busName);
             if (!nameOwner.isEmpty()) {
                 addNameOwner(busName, nameOwner);
@@ -309,7 +264,7 @@ uint DBusMonitorThreadPrivate::queryBusNameUnixPid(const QString &busName)
     DBusMessage *dmsg = dbus_message_new_method_call(
                 DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetConnectionUnixProcessID");
     if (!dmsg) {
-        tool_oom("create new message");
+        Utils::fatal_oom("create new message");
     }
     std::string stds = busName.toStdString();
     const char *str_ptr = stds.c_str();
@@ -339,7 +294,7 @@ QString DBusMonitorThreadPrivate::queryNameOwner(const QString &busName)
     DBusMessage *dmsg = dbus_message_new_method_call(
                 DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS, "GetNameOwner");
     if (!dmsg) {
-        tool_oom("create new message");
+        Utils::fatal_oom("create new message");
     }
     std::string stds = busName.toStdString();
     const char *str_ptr = stds.c_str();
@@ -437,7 +392,7 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     messageObj.destinationAddress = QString::fromUtf8(dbus_message_get_destination(message));
     // destinationAddress may be in form of numeric address ":x.y" or in form of bus name "org.kde.xxxx"
     messageObj.type = dbus_message_get_type (message);
-    messageObj.typeString = dbusMessageTypeToString(messageObj.type);
+    messageObj.typeString = Utils::dbusMessageTypeToString(messageObj.type);
 
     // handle messages from DBus about new clients
     if (dbus_message_is_method_call(message, DBUS_INTERFACE_DBUS, "Hello")) {
@@ -460,7 +415,7 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
         if (dbus_message_get_args(message, &derror, DBUS_TYPE_STRING, &str_ptr, DBUS_TYPE_INVALID)) {
             const QString newName = QString::fromUtf8(str_ptr);
             // name may be numeric, if so, no need to resolve it
-            if (!isNumericAddress(newName)) {
+            if (!Utils::isNumericAddress(newName)) {
                 const QString nameOwner = owner->d_ptr->queryNameOwner(newName);
                 if (!nameOwner.isEmpty()) {
                     owner->d_ptr->addNameOwner(newName, nameOwner);
@@ -483,7 +438,7 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
             // NameLost: "org.dharkael.Flameshot" :1.1225
 
             // name may be numeric, if so, no need to delete it
-            if (!isNumericAddress(busName)) {
+            if (!Utils::isNumericAddress(busName)) {
                 owner->d_ptr->removeNameOwner(busAddr, busName);
                 qCDebug(logMon) << "remove name:" << busName << "from" << busAddr;
             }
@@ -515,7 +470,7 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     dbus_message_iter_init(message, &iter);
     // TODO: get message contents
 
-    if (!isNumericAddress(messageObj.destinationAddress)) {
+    if (!Utils::isNumericAddress(messageObj.destinationAddress)) {
         messageObj.destinationAddress = owner->d_ptr->resolveNameAddress(messageObj.destinationAddress);
     }
 
@@ -536,10 +491,10 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
 
 #ifdef Q_OS_LINUX
     if (messageObj.senderPid > 0) {
-        messageObj.senderExe = pid2filename(messageObj.senderPid);
+        messageObj.senderExe = Utils::pid2filename(messageObj.senderPid);
     }
     if (messageObj.destinationPid > 0) {
-        messageObj.destinationExe = pid2filename(messageObj.destinationPid);
+        messageObj.destinationExe = Utils::pid2filename(messageObj.destinationPid);
     }
 #endif
 

@@ -35,7 +35,4 @@ private:
 };
 
 
-QString dbusMessageTypeToString(int message_type);
-
-
 #endif // DBUSMONITORTHREAD_H
