@@ -2,13 +2,14 @@
 #define UTILS_H
 
 #include <QString>
+#include "libqdbusmonitor.h"
 
 namespace Utils {
 
-QString dbusMessageTypeToString(int message_type);
-bool isNumericAddress(const QString &busName);
-[[noreturn]] void fatal_oom(const char *where);
-QString pid2filename(uint pid);
+LIBQDBUSMONITOR_API QString dbusMessageTypeToString(int message_type);
+LIBQDBUSMONITOR_API bool isNumericAddress(const QString &busName);
+[[noreturn]] LIBQDBUSMONITOR_API void fatal_oom(const char *where);
+LIBQDBUSMONITOR_API QString pid2filename(uint pid);
 
 }
 

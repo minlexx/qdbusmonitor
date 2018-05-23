@@ -3,8 +3,9 @@
 
 #include <QObject>
 #include <QList>
+#include "libqdbusmonitor.h"
 
-class DBusMessageObject
+class LIBQDBUSMONITOR_API DBusMessageObject
 {
     Q_GADGET
 

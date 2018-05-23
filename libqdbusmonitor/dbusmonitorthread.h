@@ -4,12 +4,13 @@
 #include <QObject>
 #include <QThread>
 
+#include "libqdbusmonitor.h"
 #include "dbusmessageobject.h"
 
 
 class DBusMonitorThreadPrivate;
 
-class DBusMonitorThread: public QThread
+class LIBQDBUSMONITOR_API DBusMonitorThread: public QThread
 {
     Q_OBJECT
     Q_PROPERTY(bool isMonitorActive READ isMonitorActive NOTIFY isMonitorActiveChanged)
