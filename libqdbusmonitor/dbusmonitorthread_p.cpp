@@ -82,6 +82,8 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
         return false;
     }
     m_dconn = nullptr;
+    m_dconn2 = nullptr;
+    const bool DBUSMONITOR_DEBUG = !qgetenv("DBUSMONITOR_DEBUG").isEmpty();
 
     DBusError derror;
     dbus_error_init(&derror);
@@ -160,6 +162,10 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
     dbus_message_unref(dreply);
     dbus_message_unref(dmsg);
 
+    if (DBUSMONITOR_DEBUG) {
+        qCDebug(logMon) << " known bus names: " << knownNames;
+    }
+
     // for each known name request its owner and pid
     for (const QString &busName: knownNames) {
         // query name owner
@@ -167,6 +173,9 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
             const QString nameOwner = queryNameOwner(busName);
             if (!nameOwner.isEmpty()) {
                 addNameOwner(busName, nameOwner);
+                if (DBUSMONITOR_DEBUG) {
+                    qCDebug(logMon) << "  name owner:" << busName << nameOwner;
+                }
             }
         }
 
@@ -174,6 +183,9 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
         uint namePid = queryBusNameUnixPid(busName);
         if (namePid > 0) {
             addNamePid(busName, namePid);
+            if (DBUSMONITOR_DEBUG) {
+                qCDebug(logMon) << "  name pid:" << busName << namePid;
+            }
         }
     }
 
@@ -311,20 +323,30 @@ void DBusMonitorThreadPrivate::addNamePid(const QString &busName, uint pid)
 
 QStringList DBusMonitorThreadPrivate::resolveDBusAddressToName(const QString &addr)
 {
+    if (addr.isEmpty()) {
+        return QStringList();
+    }
     if (m_addrNames.contains(addr)) {
         return m_addrNames[addr];
     }
+    // qCDebug(logMon) << "Failed to resolve bus addr to name:" << addr;
+    // ^^ This is perfectly normal, not every address should have a name on bus
     return QStringList();
 }
 
 QString DBusMonitorThreadPrivate::resolveNameAddress(const QString &name)
 {
+    if (name.isEmpty()) {
+        return QString();
+    }
     for (const QString &addr: m_addrNames.keys()) {
         const QStringList &names = m_addrNames[addr];
         if (names.contains(name)) {
             return addr;
         }
     }
+    qCDebug(logMon) << "Failed to resolve name bus addr:" << name;
+    // ^^ This is wrong, every name should have a numeric address
     return QString();
 }
 
@@ -438,6 +460,10 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     dbus_message_iter_init(message, &iter);
     // TODO: get message contents
 
+    // resolve addresses to numeric
+    if (!Utils::isNumericAddress(messageObj.senderAddress)) {
+        messageObj.senderAddress = owner->d_ptr->resolveNameAddress(messageObj.senderAddress);
+    }
     if (!Utils::isNumericAddress(messageObj.destinationAddress)) {
         messageObj.destinationAddress = owner->d_ptr->resolveNameAddress(messageObj.destinationAddress);
     }
