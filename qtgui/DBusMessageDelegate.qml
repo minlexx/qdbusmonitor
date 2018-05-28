@@ -36,10 +36,11 @@ ItemDelegate {
     property int innerRectMargin: 5
 
     function truncateString(s, limit) {
-        if (s.length > limit) {
-            s = s.substring(0, limit-3) + '...';
+        var ret = s;
+        if (ret.length > limit) {
+            ret = ret.substring(0, limit-3) + '...';
         }
-        return s;
+        return ret;
     }
 
     Component.onCompleted: {
@@ -137,5 +138,9 @@ ItemDelegate {
             }
         }
 
+    }
+
+    onClicked: {
+        // console.log("clicked:" + index);
     }
 }
