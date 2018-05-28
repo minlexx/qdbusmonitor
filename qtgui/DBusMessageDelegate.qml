@@ -3,74 +3,101 @@ import QtQuick.Controls 2.0
 
 ItemDelegate {
     id: delegate
-    implicitHeight: row1.height
+    implicitHeight: mainRow.height + 5
     // width: parent.width // set from parent
     // highlighted: ListView.isCurrentItem // set from parent
 
-    property bool isSignal: false
-    property bool isError: false
-
     property string typeString: ""
+
+    property bool isSignal:       typeString === "signal"
+    property bool isError:        typeString === "error"
+    property bool isMethodCall:   typeString === "method call"
+    property bool isMethodReturn: typeString === "method return"
 
     property string senderAddress: ""
     property string senderExe: ""
+    property int    senderPid: 0
     property var    senderNames: undefined // JavaScript array (QStringList)
     property string senderNamesStr: ""
+    property string senderNamesStrShort: ""
 
     property string destinationAddress: ""
     property string destinationExe: ""
+    property int    destinationPid: 0
     property var    destinationNames: undefined // JavaScript array (QStringList)
     property string destinationNamesStr: ""
+    property string destinationNamesStrShort: ""
 
     property string msgPath: ""
     property string msgInterface: ""
     property string msgMember: ""
+
+    property int longNamesTruncateLimit: 50
+    property int innerRectMargin: 5
+
+    function truncateString(s, limit) {
+        if (s.length > limit) {
+            s = s.substring(0, limit-3) + '...';
+        }
+        return s;
+    }
 
     Component.onCompleted: {
         // ^^ create a string like: "org.freedesktop.Notifications,org.kde.StatusNotifierHost-4344,
         //                           org.kde.plasmashell,com.canonical.Unity"
         if (senderNames !== undefined) {
             senderNamesStr = senderNames.join(",");
+            senderNamesStrShort = truncateString(senderNamesStr, longNamesTruncateLimit);
         }
         if (destinationNames !== undefined) {
             destinationNamesStr = destinationNames.join(",");
+            destinationNamesStrShort = truncateString(destinationNamesStr, longNamesTruncateLimit);
         }
     }
 
     Row {
-        id: row1
-        height: senderRect.height
+        id: mainRow
+        height: senderRect.height > destRect.height ? senderRect.height : destRect.height
         spacing: 5
 
         Rectangle {
             id: senderRect
-            radius: isSignal ? 10 : 0
+            radius: isSignal ? innerRectMargin*2 : innerRectMargin
             border.width: 2
             border.color: isSignal ? "green" : (isError ? "red" : "black")
-            implicitWidth: innerCol1.width
-            implicitHeight: innerCol1.height
+            implicitWidth: innerCol1.width + innerRectMargin*2
+            implicitHeight: innerCol1.height + innerRectMargin*2
 
 
             Column {
                 id: innerCol1
-                spacing: 5
+                spacing: 2
                 anchors.top: parent.top
                 anchors.left: parent.left
-                anchors.margins: 5
+                anchors.margins: innerRectMargin
 
                 Text {
-                    id: txtType
-                    text: "(" + typeString + ") "
+                    text: "[" + senderAddress + "] " + senderNamesStrShort
+                    font.bold: true
                 }
                 Text {
-                    text: "[" + senderAddress + "]"
+                    text: senderExe + " (pid: " + senderPid + ")"
                 }
                 Text {
-                    text: senderExe !== "" ? senderExe : senderNamesStr
+                    text: "path: " + msgPath
+                    visible: isSignal
+                }
+                Text {
+                    text: typeString + " " + msgInterface + "." + msgMember
+                    visible: isSignal
                 }
             }
         }
 
+        Text {
+            text: typeString
+            visible: !isSignal
+        }
         Text {
             text: "  =>  "
             visible: !isSignal
@@ -78,31 +105,37 @@ ItemDelegate {
 
         Rectangle {
             id: destRect
+            radius: innerRectMargin
             visible: !isSignal
             border.width: 2
             border.color: isError ? "red" : "black"
-            implicitWidth: innerCol2.width
-            implicitHeight: innerCol2.height
+            implicitWidth: innerCol2.width + innerRectMargin*2
+            implicitHeight: innerCol2.height + innerRectMargin*2
 
             Column {
                 id: innerCol2
-                spacing: 5
+                spacing: 2
                 anchors.top: parent.top
                 anchors.left: parent.left
-                anchors.margins: 5
+                anchors.margins: innerRectMargin
 
                 Text {
-                    text: "[" + destinationAddress + "]"
+                    text: "[" + destinationAddress + "] " + destinationNamesStrShort
+                    font.bold: true
                 }
                 Text {
-                    text: destinationExe !== "" ? destinationExe : destinationNamesStr
-                    visible: destinationNamesStr !== destinationAddress
+                    text: destinationExe + " (pid: " + destinationPid + ")"
+                }
+                Text {
+                    text: "path: " + msgPath
+                    visible: !isSignal && !isMethodReturn
+                }
+                Text {
+                    text: msgInterface + "." + msgMember
+                    visible: !isSignal && !isMethodReturn
                 }
             }
         }
 
-        Text { text: msgPath }
-        Text { text: msgInterface }
-        Text { text: msgMember }
     }
 }

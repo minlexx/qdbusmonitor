@@ -72,6 +72,7 @@ Window {
             left: parent.left
             right: parent.right
             bottom: parent.bottom
+            margins: 5
         }
         model: app.messagesModel
         interactive: true
@@ -83,15 +84,15 @@ Window {
             highlighted: ListView.isCurrentItem
 
             typeString: model.typeString
-            isSignal: model.typeString === "signal"
-            isError:  model.typeString === "error"
 
             senderAddress: model.senderAddress
             senderExe: model.senderExe
+            senderPid: model.senderPid
             senderNames: model.senderNames
 
             destinationAddress: model.destinationAddress
             destinationExe: model.destinationExe
+            destinationPid: model.destinationPid
             destinationNames: model.destinationNames
 
             msgPath: model.path
