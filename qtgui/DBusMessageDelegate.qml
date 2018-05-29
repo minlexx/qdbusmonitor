@@ -40,6 +40,15 @@ ItemDelegate {
     property int longNamesTruncateLimit: 60
     property int innerRectMargin: 5
 
+    property color colorBorderSignal: "green"
+    property color colorBorderError: "red"
+    property color colorBorderNormal: "black"
+    property color colorAddress: "gray"
+    property color colorInterface: "#6c3109"
+    property color colorMember: "#c06121"
+    property color colorPath: "black"
+    property color colorExe: "#0b2a8f"
+
     function truncateString(s, limit) {
         var ret = s;
         if (ret.length > limit) {
@@ -70,7 +79,7 @@ ItemDelegate {
             id: senderRect
             radius: isSignal ? innerRectMargin*2 : innerRectMargin
             border.width: 2
-            border.color: isSignal ? "green" : (isError ? "red" : "black")
+            border.color: isSignal ? colorBorderSignal : (isError ? colorBorderError : colorBorderNormal)
             implicitWidth: innerCol1.width + innerRectMargin*2
             implicitHeight: innerCol1.height + innerRectMargin*2
 
@@ -82,20 +91,42 @@ ItemDelegate {
                 anchors.left: parent.left
                 anchors.margins: innerRectMargin
 
-                Text {
-                    text: "[" + senderAddress + "] " + senderNamesStrShort
-                    font.bold: true
+                Row {
+                    Text {
+                        text: "[" + senderAddress + "] "
+                        color: colorAddress
+                    }
+                    Text {
+                        text: senderNamesStrShort
+                        font.bold: true
+                    }
                 }
+
                 Text {
                     text: senderExe + " (pid: " + senderPid + ")"
+                    color: colorExe
+                    font.italic: true
                 }
+
                 Text {
                     text: "path: " + msgPath
-                    visible: isSignal
+                    // visible: isSignal
+                    visible: msgPath !== ""
+                    color: colorPath
                 }
-                Text {
-                    text: typeString + " " + msgInterface + "." + msgMember
+
+                Row {
                     visible: isSignal
+                    Text {
+                        text: msgInterface + "."
+                        color: colorInterface
+                        font.bold: true
+                    }
+                    Text {
+                        text: msgMember + "()"
+                        color: colorMember
+                        font.bold: true
+                    }
                 }
             }
         }
@@ -117,7 +148,7 @@ ItemDelegate {
             radius: innerRectMargin
             visible: !isSignal
             border.width: 2
-            border.color: isError ? "red" : "black"
+            border.color: isError ? colorBorderError : colorBorderNormal
             implicitWidth: innerCol2.width + innerRectMargin*2
             implicitHeight: innerCol2.height + innerRectMargin*2
 
@@ -128,20 +159,41 @@ ItemDelegate {
                 anchors.left: parent.left
                 anchors.margins: innerRectMargin
 
-                Text {
-                    text: "[" + destinationAddress + "] " + destinationNamesStrShort
-                    font.bold: true
+                Row {
+                    Text {
+                        text: "[" + destinationAddress + "] "
+                        color: colorAddress
+                    }
+                    Text {
+                        text: destinationNamesStrShort
+                        font.bold: true
+                    }
                 }
+
                 Text {
                     text: destinationExe + " (pid: " + destinationPid + ")"
+                    color: colorExe
+                    font.italic: true
                 }
+
                 Text {
                     text: "path: " + msgPath
-                    visible: !isSignal && !isMethodReturn
+                    visible: msgPath !== ""
+                    color: colorPath
                 }
-                Text {
-                    text: msgInterface + "." + msgMember
+
+                Row {
                     visible: !isSignal && !isMethodReturn
+                    Text {
+                        text: msgInterface + "."
+                        color: colorInterface
+                        font.bold: true
+                    }
+                    Text {
+                        text: msgMember + "()"
+                        color: colorMember
+                        font.bold: true
+                    }
                 }
             }
         }
