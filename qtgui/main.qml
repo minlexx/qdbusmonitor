@@ -83,6 +83,8 @@ Window {
             width: parent.width
             highlighted: ListView.isCurrentItem
 
+            serial: model.serial
+            replySerial: model.replySerial
             typeString: model.typeString
 
             senderAddress: model.senderAddress
@@ -102,9 +104,17 @@ Window {
             onClicked: {
                 messagesView.currentIndex = index;
             }
+
+            onShowReply: {
+                console.log("Request show reply to: " + id);
+            }
+
+            onShowRequest: {
+                console.log("Request show call: " + id);
+            }
         }
 
-        ScrollIndicator.vertical: ScrollIndicator { }
+        ScrollBar.vertical: ScrollBar { }
     }
 
     Connections {
