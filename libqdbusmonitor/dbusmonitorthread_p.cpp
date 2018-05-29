@@ -378,6 +378,7 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
 
     // get base message properties
     DBusMessageObject messageObj;
+    messageObj.timestamp = QDateTime::currentDateTime();
     messageObj.senderAddress = QString::fromUtf8(dbus_message_get_sender(message));
     messageObj.destinationAddress = QString::fromUtf8(dbus_message_get_destination(message));
     // destinationAddress may be in form of numeric address ":x.y" or in form of bus name "org.kde.xxxx"

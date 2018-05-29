@@ -3,7 +3,8 @@
 
 bool DBusMessageObject::operator==(const DBusMessageObject &o) const
 {
-    return (type == o.type)
+    return (timestamp == o.timestamp)
+            && (type == o.type)
             && (serial == o.serial)
             && (replySerial == o.replySerial)
             && (senderPid == o.senderPid)

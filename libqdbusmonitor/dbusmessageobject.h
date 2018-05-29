@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QList>
+#include <QDateTime>
 #include "libqdbusmonitor.h"
 
 class LIBQDBUSMONITOR_API DBusMessageObject
@@ -19,22 +20,23 @@ public:
     bool operator!=(const DBusMessageObject &o) const;
 
 public:
-    int     type = 0;
-    uint    serial = 0;
-    uint    replySerial = 0;
-    uint    senderPid = 0;
-    uint    destinationPid = 0;
-    QString typeString;
-    QString senderAddress;
+    QDateTime timestamp;
+    int       type = 0;
+    uint      serial = 0;
+    uint      replySerial = 0;
+    uint      senderPid = 0;
+    uint      destinationPid = 0;
+    QString   typeString;
+    QString   senderAddress;
     QStringList senderNames;
-    QString senderExe;
-    QString destinationAddress;
+    QString   senderExe;
+    QString   destinationAddress;
     QStringList destinationNames;
-    QString destinationExe;
-    QString path;
-    QString interface;
-    QString member;
-    QString errorName; // only used for error mesages
+    QString   destinationExe;
+    QString   path;
+    QString   interface;
+    QString   member;
+    QString   errorName; // only used for error mesages
 };
 
 Q_DECLARE_METATYPE(DBusMessageObject)

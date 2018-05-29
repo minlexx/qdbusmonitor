@@ -11,6 +11,7 @@ QHash<int, QByteArray> DBusMessagesModel::roleNames() const
     static const QHash<int, QByteArray> r = {
         {Serial,             QByteArrayLiteral("serial")},
         {ReplySerial,        QByteArrayLiteral("replySerial")},
+        {Timestamp,          QByteArrayLiteral("timestamp")},
         {Type,               QByteArrayLiteral("type")},
         {TypeString,         QByteArrayLiteral("typeString")},
         {SenderAddress,      QByteArrayLiteral("senderAddress")},
@@ -53,6 +54,7 @@ QVariant DBusMessagesModel::data(const QModelIndex &index, int role) const
     switch (role) {
     case Role::Serial:             ret = dmsg.serial;             break;
     case Role::ReplySerial:        ret = dmsg.replySerial;        break;
+    case Role::Timestamp:          ret = dmsg.timestamp;          break;
     case Role::Type:               ret = dmsg.type;               break;
     case Role::TypeString:         ret = dmsg.typeString;         break;
     case Role::SenderAddress:      ret = dmsg.senderAddress;      break;

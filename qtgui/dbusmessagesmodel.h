@@ -18,6 +18,7 @@ public:
     enum Role {
         Serial = Qt::UserRole + 1,
         ReplySerial,
+        Timestamp,
         Type,
         TypeString,
         SenderAddress,
