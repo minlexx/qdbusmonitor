@@ -106,11 +106,17 @@ Window {
             }
 
             onShowReply: {
-                console.log("Request show reply to: " + id);
+                cbAutoScroll.checked = false;  // disable autoscroll
+                var idx = app.messagesModel.findReplySerial(id);
+                messagesView.positionViewAtIndex(idx, ListView.Center);
+                messagesView.currentIndex = idx;
             }
 
             onShowRequest: {
-                console.log("Request show call: " + id);
+                cbAutoScroll.checked = false;  // disable autoscroll
+                var idx = app.messagesModel.findSerial(id);
+                messagesView.positionViewAtIndex(idx, ListView.Center);
+                messagesView.currentIndex = idx;
             }
         }
 
