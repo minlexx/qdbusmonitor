@@ -41,10 +41,13 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-public:
+public Q_SLOTS:
     void addMessage(const DBusMessageObject &dmsg);
     void addMessage(DBusMessageObject &&dmsg);
     void clear();
+
+    int findSerial(uint serial) const;
+    int findReplySerial(uint serial) const;
 
 private:
     QHash<int, QByteArray> m_roles;

@@ -95,3 +95,27 @@ void DBusMessagesModel::clear()
     m_data.clear();
     endResetModel();
 }
+
+int DBusMessagesModel::findSerial(uint serial) const
+{
+    QMutexLocker guard(&m_mutex);
+    for (int idx = 0; idx < m_data.size(); idx++) {
+        const auto &msg = m_data.at(idx);
+        if (msg.serial == serial) {
+            return idx;
+        }
+    }
+    return -1;
+}
+
+int DBusMessagesModel::findReplySerial(uint serial) const
+{
+    QMutexLocker guard(&m_mutex);
+    for (int idx = 0; idx < m_data.size(); idx++) {
+        const auto &msg = m_data.at(idx);
+        if (msg.replySerial == serial) {
+            return idx;
+        }
+    }
+    return -1;
+}
