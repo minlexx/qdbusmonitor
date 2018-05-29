@@ -33,3 +33,4 @@
 
 # qtcreator project user settings
 CMakeLists.txt.user
+*.qmlc
