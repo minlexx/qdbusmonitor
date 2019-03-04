@@ -190,7 +190,7 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
     // libdbus handle them internally, which is the wrong thing for a monitor
     dbus_connection_set_route_peer_messages(m_dconn, TRUE);
 
-    if (!dbus_connection_add_filter(m_dconn, monitorFunc, static_cast<void *>(owner), nullptr)) {
+    if (!dbus_connection_add_filter(m_dconn, monitorFunc, owner, nullptr)) {
         qCWarning(logMon) << "Couldn't add filter!";
         closeDbusConn();
         return false;
