@@ -44,7 +44,7 @@ bool DBusMonitorThreadPrivate::becomeMonitor()
 
     dbus_message_iter_init_append(msg, &appender);
 
-    if (!dbus_message_iter_open_container(&appender, DBUS_TYPE_ARRAY, "s", &array_appender)) {
+    if (!dbus_message_iter_open_container(&appender, DBUS_TYPE_ARRAY, DBUS_TYPE_STRING_AS_STRING, &array_appender)) {
         Utils::fatal_oom("opening string array");
     }
 
