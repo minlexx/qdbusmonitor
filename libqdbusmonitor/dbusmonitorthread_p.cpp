@@ -110,9 +110,7 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
     m_myName2 = QString::fromUtf8(dbus_bus_get_unique_name(m_dconn2));
     qCDebug(logMon) << "Connected to D_Bus as: " << m_myName << m_myName2;
 
-    qCDebug(logMon).nospace() << "Compiled with libdbus version: " << DBUS_MAJOR_VERSION
-                              << "." << DBUS_MINOR_VERSION
-                              << "." << DBUS_MICRO_VERSION;
+    qCDebug(logMon) << "Compiled with libdbus version: " << DBUS_VERSION_STRING;
 
     int vmajor = 0, vminor = 0, vmicro = 0;
     dbus_get_version(&vmajor, &vminor, &vmicro);
