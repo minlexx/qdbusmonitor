@@ -1,4 +1,3 @@
-#include <QDebug>
 #include <QLoggingCategory>
 #include "dbusmonitorthread_p.h"
 #include "dbusmonitorthread.h"
