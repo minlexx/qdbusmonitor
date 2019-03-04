@@ -1,7 +1,6 @@
 #ifndef DBUSMONITORTHREAD_H
 #define DBUSMONITORTHREAD_H
 
-#include <QObject>
 #include <QThread>
 
 #include "libqdbusmonitor.h"
