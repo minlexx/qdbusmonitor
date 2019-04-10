@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QList>
 #include <QDateTime>
+#include <QVariantList>
 #include "libqdbusmonitor.h"
 
 class LIBQDBUSMONITOR_API DBusMessageObject
@@ -37,6 +38,8 @@ public:
     QString   interface;
     QString   member;
     QString   errorName; // only used for error mesages
+    // message contents can be very very varying
+    QVariantList contents;
 };
 
 Q_DECLARE_METATYPE(DBusMessageObject)
