@@ -21,6 +21,7 @@ add_library(${PROJECT_NAME} SHARED
     "dbusmessageobject.cpp"
     "dbusmonitorthread.cpp"
     "dbusmonitorthread_p.cpp"
+    "messagecontentsparser.cpp"
     "utils.cpp"
 )
 

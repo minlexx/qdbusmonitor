@@ -1,6 +1,7 @@
 #include <QLoggingCategory>
 #include "dbusmonitorthread_p.h"
 #include "dbusmonitorthread.h"
+#include "messagecontentsparser.h"
 #include "utils.h"
 
 
@@ -18,6 +19,8 @@ Q_LOGGING_CATEGORY(logMon, "monitor.thread")
 #define DBUS_INTERFACE_MONITORING     "org.freedesktop.DBus.Monitoring"
 #endif
 
+static bool DBUSMONITOR_DEBUG = false;
+
 
 DBusMonitorThreadPrivate::DBusMonitorThreadPrivate(DBusMonitorThread *parent)
     : owner(parent)
@@ -34,9 +37,9 @@ bool DBusMonitorThreadPrivate::becomeMonitor()
     DBusMessageIter appender, array_appender;
 
     msg = dbus_message_new_method_call(DBUS_SERVICE_DBUS,
-                                     DBUS_PATH_DBUS,
-                                     DBUS_INTERFACE_MONITORING,
-                                     "BecomeMonitor");
+                                       DBUS_PATH_DBUS,
+                                       DBUS_INTERFACE_MONITORING,
+                                       "BecomeMonitor");
 
     if (msg == nullptr) {
         Utils::fatal_oom("becoming a monitor");
@@ -82,7 +85,8 @@ bool DBusMonitorThreadPrivate::startBus(DBusBusType type)
     }
     m_dconn = nullptr;
     m_dconn2 = nullptr;
-    const bool DBUSMONITOR_DEBUG = !qgetenv("DBUSMONITOR_DEBUG").isEmpty();
+
+    DBUSMONITOR_DEBUG = !qgetenv("DBUSMONITOR_DEBUG").isEmpty();
 
     DBusError derror;
     dbus_error_init(&derror);
@@ -456,7 +460,11 @@ DBusHandlerResult DBusMonitorThreadPrivate::monitorFunc(
     // get message contents
     DBusMessageIter iter;
     dbus_message_iter_init(message, &iter);
-    // TODO: get message contents
+    messageObj.contents = parseMessageContents(&iter);
+    if (DBUSMONITOR_DEBUG) {
+        // only method calls and signals can contain useful contents?
+        qCDebug(logMon) << messageObj.typeString << "contents:" << messageObj.contents;
+    }
 
     // resolve addresses to numeric
     if (!Utils::isNumericAddress(messageObj.senderAddress)) {
